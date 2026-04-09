@@ -324,18 +324,21 @@ body {
 }
 
 /* ── Masters Leaderboard ──────────────────────────────────────────────────── */
-.leaderboard-container { overflow-x: auto; }
+.leaderboard-container {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--gray-light);
+}
 
 .lb-table {
   width: 100%;
+  min-width: 540px;
   border-collapse: collapse;
   font-family: sans-serif;
   font-size: 0.85rem;
   background: var(--white);
-  border-radius: var(--radius);
-  overflow: hidden;
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--gray-light);
 }
 
 .lb-table thead {
@@ -425,8 +428,15 @@ body {
 @media (max-width: 600px) {
   .header-inner { padding: 16px; }
   .header-title h1 { font-size: 1.4rem; }
-  .main-content { padding: 20px 16px 32px; }
-  .picks-grid { grid-template-columns: 1fr 1fr; }
-  .lb-table thead th.hide-sm,
-  .lb-table td.hide-sm { display: none; }
+  .main-content { padding: 20px 16px 32px; gap: 32px; }
+
+  /* Single-column pick chips so names + scores have room to breathe */
+  .picks-grid { grid-template-columns: 1fr; }
+  .card-picks { padding: 12px 14px; }
+  .card-header { padding: 12px 14px; }
+
+  /* Table scrolls horizontally — all columns remain visible */
+  .lb-table { font-size: 0.8rem; }
+  .lb-table thead th,
+  .lb-table td { padding: 8px 10px; }
 }

@@ -148,10 +148,10 @@ function renderLeaderboard(data) {
         <th>Pos</th>
         <th>Player</th>
         <th class="num">Total</th>
-        <th class="num hide-sm">R1</th>
-        <th class="num hide-sm">R2</th>
-        <th class="num hide-sm">R3</th>
-        <th class="num hide-sm">R4</th>
+        <th class="num">R1</th>
+        <th class="num">R2</th>
+        <th class="num">R3</th>
+        <th class="num">R4</th>
         <th class="num">Thru</th>
       </tr>
     </thead>`;
@@ -185,7 +185,7 @@ function renderLeaderboard(data) {
       const r = player.rounds?.[i];
       const val = r?.display ?? '-';
       const rCls = r?.score != null ? `lb-round ${scoreClass(r.score)}` : 'lb-round';
-      tr.appendChild(el('td', `num hide-sm ${rCls}`, escHtml(val)));
+      tr.appendChild(el('td', `num ${rCls}`, escHtml(val)));
     }
 
     // Thru / status
