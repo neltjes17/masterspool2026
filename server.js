@@ -72,28 +72,36 @@ async function fetchMastersScores() {
 }
 
 function parseMastersData(json) {
-  const rawPlayers = json?.data?.players ?? json?.players ?? [];
+  // Players live at data.player (singular), not data.players
+  const rawPlayers = json?.data?.player ?? json?.player ?? [];
   if (rawPlayers.length === 0) return null;
 
   const players = {};
   for (const raw of rawPlayers) {
-    const roundDefs = [
-      { gross: raw.round1 }, { gross: raw.round2 },
-      { gross: raw.round3 }, { gross: raw.round4 },
-    ];
-    const rounds = roundDefs.map(({ gross }) => {
+    // Each round is now an object: { total: 67, roundStatus: "Finished", ... }
+    const roundDefs = [raw.round1, raw.round2, raw.round3, raw.round4];
+    const rounds = roundDefs.map(r => {
+      const gross = r?.total;          // integer gross score, null if not played
       const grossInt = parseInt(gross, 10);
       return { score: grossToNet(gross), display: isNaN(grossInt) ? '-' : String(grossInt) };
     });
-    const currentRound = roundDefs.reduce((last, { gross }, i) =>
-      parseInt(gross, 10) > 0 ? i + 1 : last, null);
+    const currentRound = roundDefs.reduce((last, r, i) =>
+      r?.total != null ? i + 1 : last, null);
+
+    // Status: "F"=finished round, "A"=active, "C"/"CUT"=missed cut, "WD"=withdrew, "DQ"=dq
+    const s = String(raw.status ?? '').toUpperCase();
+    let status = 'active';
+    if (s === 'C' || s === 'CUT' || /CUT/i.test(raw.newStatus ?? '')) status = 'cut';
+    else if (s === 'WD') status = 'wd';
+    else if (s === 'DQ') status = 'dq';
+
     const name = raw.full_name || raw.display_name;
     if (!name) continue;
     players[normalizeName(name)] = {
       name,
       total: parseScore(raw.topar) ?? 0,
       rounds,
-      status: (raw.status || 'active').toLowerCase(),
+      status,
       thru: parseThru(raw.thru),
       position: raw.pos || '',
       currentRound,
@@ -136,12 +144,21 @@ function parseESPNData(json) {
   for (const c of comp.competitors ?? []) {
     const name = c.athlete?.displayName;
     if (!name) continue;
-    const rounds = (c.linescores ?? []).map(ls => {
+
+    // c.score is { value: 76, displayValue: "+4" } — use displayValue for net total
+    const total = parseScore(c.score?.displayValue) ?? parseScore(c.score) ?? 0;
+
+    // linescores: each { value: 76 (gross), displayValue: "+4" (round net), period: 1 }
+    const lsMap = {};
+    for (const ls of c.linescores ?? []) {
+      if (ls.period) lsMap[ls.period] = ls;
+    }
+    const rounds = [1, 2, 3, 4].map(period => {
+      const ls = lsMap[period];
+      if (!ls || ls.value == null) return { score: null, display: '-' };
       const grossInt = parseInt(ls.value, 10);
       return { score: grossToNet(ls.value), display: isNaN(grossInt) ? '-' : String(grossInt) };
     });
-    // Pad to 4 rounds
-    while (rounds.length < 4) rounds.push({ score: null, display: '-' });
 
     const statusName = c.status?.type?.name ?? '';
     let status = 'active';
@@ -149,13 +166,18 @@ function parseESPNData(json) {
     else if (/WD|WITHDRAWN/i.test(statusName)) status = 'wd';
     else if (/DQ/i.test(statusName)) status = 'dq';
 
+    // thru: ESPN resets to 0 between rounds; use todayDetail "(F)" to detect finished
+    let thru = c.status?.thru ?? null;
+    if (/\(F\)/i.test(c.status?.todayDetail ?? '')) thru = 'F';
+    else if (!thru) thru = null;
+
     players[normalizeName(name)] = {
       name,
-      total: parseScore(c.score) ?? 0,
+      total,
       rounds,
       status,
-      thru: c.status?.thru ?? null,
-      position: c.status?.position?.displayText ?? '',
+      thru,
+      position: c.status?.position?.displayName ?? '',
       currentRound: c.status?.period ?? null,
     };
   }
