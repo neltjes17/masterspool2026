@@ -10,7 +10,7 @@
     },
     {
       "name": "Tito",
-      "picks": ["Bryson Dechambeau", "John Rahm", "Patrick Reed", "Min Woo Lee", "Adam Scott", "Jacob Bridgeman", "Jake Knapp"]
+      "picks": ["Bryson Dechambeau", "Jon Rahm", "Patrick Reed", "Min Woo Lee", "Adam Scott", "Jacob Bridgeman", "Jake Knapp"]
     },
     {
       "name": "Noah L",
@@ -18,11 +18,11 @@
     },
     {
       "name": "Connor",
-      "picks": ["Scottie Scheffler", "Robert MacIntyre", "Chris Gotterup", "Akshay Bhatia", "Nicolai Hojgaard", "Justin Thomas", "John Rahm"]
+      "picks": ["Scottie Scheffler", "Robert MacIntyre", "Chris Gotterup", "Akshay Bhatia", "Nicolai Hojgaard", "Justin Thomas", "Jon Rahm"]
     },
     {
       "name": "Nick",
-      "picks": ["John Rahm", "Scottie Scheffler", "Patrick Reed", "Shane Lowry", "Jason Day", "Sung Jae Im", "Jordan Spieth"]
+      "picks": ["Jon Rahm", "Scottie Scheffler", "Patrick Reed", "Shane Lowry", "Jason Day", "Sung Jae Im", "Jordan Spieth"]
     },
     {
       "name": "Noah M",
@@ -30,7 +30,7 @@
     },
     {
       "name": "Carter V",
-      "picks": ["Tommy Fleetwood", "Xander Schauffele", "Justin Rose", "Colin Morikawa", "Akshay Bhatia", "Sung Jae Im", "Corey Conners"]
+      "picks": ["Tommy Fleetwood", "Xander Schauffele", "Justin Rose", "Collin Morikawa", "Akshay Bhatia", "Sung Jae Im", "Corey Conners"]
     },
     {
       "name": "Jared",
@@ -46,15 +46,15 @@
     },
     {
       "name": "Carter H",
-      "picks": ["Bryson Dechambeau", "Scottie Scheffler", "Jordan Spieth", "Colin Morikawa", "Justin Thomas", "Max Homa", "Viktor Hovland"]
+      "picks": ["Bryson Dechambeau", "Scottie Scheffler", "Jordan Spieth", "Collin Morikawa", "Justin Thomas", "Max Homa", "Viktor Hovland"]
     },
     {
       "name": "Alex",
-      "picks": ["Ludvig Aberg", "Matt Fitzpatrick", "Colin Morikawa", "Chris Gotterup", "Akshay Bhatia", "Shane Lowry", "Corey Conners"]
+      "picks": ["Ludvig Aberg", "Matt Fitzpatrick", "Collin Morikawa", "Chris Gotterup", "Akshay Bhatia", "Shane Lowry", "Corey Conners"]
     },
     {
       "name": "Zach V",
-      "picks": ["John Rahm", "Bryson Dechambeau", "Patrick Reed", "Chris Gotterup", "Viktor Hovland", "Shane Lowry", "Gary Woodland"]
+      "picks": ["Jon Rahm", "Bryson Dechambeau", "Patrick Reed", "Chris Gotterup", "Viktor Hovland", "Shane Lowry", "Gary Woodland"]
     }
   ]
 }
