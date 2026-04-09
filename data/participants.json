@@ -1,3 +1,60 @@
 {
-  "participants": []
+  "participants": [
+    {
+      "name": "Chase",
+      "picks": ["Bryson Dechambeau", "Matt Fitzpatrick", "Patrick Reed", "Jordan Spieth", "Jake Knapp", "Akshay Bhatia", "Gary Woodland"]
+    },
+    {
+      "name": "Jordan",
+      "picks": ["Scottie Scheffler", "Matt Fitzpatrick", "Justin Rose", "Patrick Reed", "Adam Scott", "Maverick McNealy", "Corey Conners"]
+    },
+    {
+      "name": "Tito",
+      "picks": ["Bryson Dechambeau", "John Rahm", "Patrick Reed", "Min Woo Lee", "Adam Scott", "Jacob Bridgeman", "Jake Knapp"]
+    },
+    {
+      "name": "Noah L",
+      "picks": ["Scottie Scheffler", "Matt Fitzpatrick", "Justin Rose", "Chris Gotterup", "Akshay Bhatia", "Patrick Cantlay", "Sepp Straka"]
+    },
+    {
+      "name": "Connor",
+      "picks": ["Scottie Scheffler", "Robert MacIntyre", "Chris Gotterup", "Akshay Bhatia", "Nicolai Hojgaard", "Justin Thomas", "John Rahm"]
+    },
+    {
+      "name": "Nick",
+      "picks": ["John Rahm", "Scottie Scheffler", "Patrick Reed", "Shane Lowry", "Jason Day", "Sung Jae Im", "Jordan Spieth"]
+    },
+    {
+      "name": "Noah M",
+      "picks": ["Bryson Dechambeau", "Ludvig Aberg", "Justin Rose", "Chris Gotterup", "Max Homa", "Maverick McNealy", "Viktor Hovland"]
+    },
+    {
+      "name": "Carter V",
+      "picks": ["Tommy Fleetwood", "Xander Schauffele", "Justin Rose", "Colin Morikawa", "Akshay Bhatia", "Sung Jae Im", "Corey Conners"]
+    },
+    {
+      "name": "Jared",
+      "picks": ["Cameron Young", "Bryson Dechambeau", "Justin Rose", "Chris Gotterup", "Jacob Bridgeman", "JJ Spaun", "Shane Lowry"]
+    },
+    {
+      "name": "Cade",
+      "picks": ["Bryson Dechambeau", "Scottie Scheffler", "Justin Rose", "Brooks Koepka", "Justin Thomas", "Viktor Hovland", "Shane Lowry"]
+    },
+    {
+      "name": "Challin",
+      "picks": ["Scottie Scheffler", "Ludvig Aberg", "Chris Gotterup", "Robert MacIntyre", "JJ Spaun", "Jake Knapp", "Viktor Hovland"]
+    },
+    {
+      "name": "Carter H",
+      "picks": ["Bryson Dechambeau", "Scottie Scheffler", "Jordan Spieth", "Colin Morikawa", "Justin Thomas", "Max Homa", "Viktor Hovland"]
+    },
+    {
+      "name": "Alex",
+      "picks": ["Ludvig Aberg", "Matt Fitzpatrick", "Colin Morikawa", "Chris Gotterup", "Akshay Bhatia", "Shane Lowry", "Corey Conners"]
+    },
+    {
+      "name": "Zach V",
+      "picks": ["John Rahm", "Bryson Dechambeau", "Patrick Reed", "Chris Gotterup", "Viktor Hovland", "Shane Lowry", "Gary Woodland"]
+    }
+  ]
 }
