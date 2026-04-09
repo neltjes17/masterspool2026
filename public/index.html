@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Masters Pool 2026</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="header-title">
+        <span class="header-flag">&#9971;</span>
+        <div>
+          <h1>Masters Pool <span class="year">2026</span></h1>
+          <p class="event-name" id="eventName">The Masters Tournament · Augusta National</p>
+        </div>
+      </div>
+      <div class="header-meta">
+        <span id="roundBadge" class="round-badge"></span>
+        <div class="last-updated">
+          Updated <span id="lastUpdated">—</span>
+          <button id="refreshBtn" class="refresh-btn" title="Refresh now">&#8635;</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-content">
+
+    <!-- Pool Standings -->
+    <section class="section">
+      <h2 class="section-title">Pool Standings</h2>
+      <p class="section-subtitle">Best 4 of 7 picks count &middot; Lowest cumulative score wins</p>
+      <div id="standingsContainer" class="standings-container">
+        <div class="loading">Loading standings&hellip;</div>
+      </div>
+    </section>
+
+    <!-- Full Masters Leaderboard -->
+    <section class="section">
+      <h2 class="section-title">Masters Leaderboard</h2>
+      <div id="leaderboardContainer" class="leaderboard-container">
+        <div class="loading">Loading leaderboard&hellip;</div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="site-footer">
+    <p>Refreshes automatically every 3 minutes during tournament play.</p>
+  </footer>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>
