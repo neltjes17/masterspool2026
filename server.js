@@ -57,7 +57,7 @@ function parseThru(thruStr) {
   return isNaN(n) ? null : n;
 }
 
-// ── masters.com feed fetch ─────────────────────────────────────────────────
+// ── masters.com feed fetch + parse ────────────────────────────────────────
 
 async function fetchMastersScores() {
   const res = await fetch(MASTERS_FEED_URL, {
@@ -67,80 +67,115 @@ async function fetchMastersScores() {
     },
     signal: AbortSignal.timeout(10000),
   });
-  if (!res.ok) throw new Error(`masters.com feed returned ${res.status}`);
+  if (!res.ok) throw new Error(`masters.com returned ${res.status}`);
   return res.json();
 }
 
-// ── masters.com feed parser ────────────────────────────────────────────────
-
-// Parse a single player entry from the masters.com feed.
-// Normalizes into the internal shape used by the rest of the server:
-//   { name, total, rounds[{score,display}], status, thru, position, currentRound }
-function parsePlayer(raw) {
-  const roundDefs = [
-    { round: 1, gross: raw.round1 },
-    { round: 2, gross: raw.round2 },
-    { round: 3, gross: raw.round3 },
-    { round: 4, gross: raw.round4 },
-  ];
-
-  const rounds = roundDefs.map(({ gross }) => {
-    const net = grossToNet(gross);
-    const grossInt = parseInt(gross, 10);
-    return {
-      score: net,                          // net-to-par (null if not played)
-      display: isNaN(grossInt) ? '-' : String(grossInt),  // gross score string
-    };
-  });
-
-  // Current round = last round that has a gross score
-  const currentRound = roundDefs.reduce((last, { round, gross }) => {
-    return parseInt(gross, 10) > 0 ? round : last;
-  }, null);
-
-  const status = (raw.status || 'active').toLowerCase();
-
-  return {
-    name: raw.full_name || raw.display_name,
-    total: parseScore(raw.topar) ?? 0,   // overall net score
-    rounds,
-    status,                               // active | cut | wd | dq
-    thru: parseThru(raw.thru),
-    position: raw.pos || '',
-    currentRound,
-  };
-}
-
-// Parse the full masters.com JSON payload → internal players map
 function parseMastersData(json) {
   const rawPlayers = json?.data?.players ?? json?.players ?? [];
   if (rawPlayers.length === 0) return null;
 
   const players = {};
   for (const raw of rawPlayers) {
-    const player = parsePlayer(raw);
-    if (!player.name) continue;
-    players[normalizeName(player.name)] = player;
+    const roundDefs = [
+      { gross: raw.round1 }, { gross: raw.round2 },
+      { gross: raw.round3 }, { gross: raw.round4 },
+    ];
+    const rounds = roundDefs.map(({ gross }) => {
+      const grossInt = parseInt(gross, 10);
+      return { score: grossToNet(gross), display: isNaN(grossInt) ? '-' : String(grossInt) };
+    });
+    const currentRound = roundDefs.reduce((last, { gross }, i) =>
+      parseInt(gross, 10) > 0 ? i + 1 : last, null);
+    const name = raw.full_name || raw.display_name;
+    if (!name) continue;
+    players[normalizeName(name)] = {
+      name,
+      total: parseScore(raw.topar) ?? 0,
+      rounds,
+      status: (raw.status || 'active').toLowerCase(),
+      thru: parseThru(raw.thru),
+      position: raw.pos || '',
+      currentRound,
+    };
   }
 
-  // Derive current round from the field
-  const activePlayers = Object.values(players).filter(p => p.status === 'active');
-  const currentRound = activePlayers.reduce((max, p) => Math.max(max, p.currentRound ?? 1), 1);
-
-  // Derive event status
-  const allFinished = activePlayers.every(p => p.thru === 'F' || p.thru === 18);
-  const eventStatus = (currentRound === 4 && allFinished) ? 'FINAL' : 'IN_PROGRESS';
+  const active = Object.values(players).filter(p => p.status === 'active');
+  const currentRound = active.reduce((max, p) => Math.max(max, p.currentRound ?? 1), 1);
+  const allFinished = active.every(p => p.thru === 'F' || p.thru === 18);
 
   return {
     eventName: 'Masters Tournament',
+    source: 'masters.com',
     currentRound,
-    eventStatus,
+    eventStatus: (currentRound === 4 && allFinished) ? 'FINAL' : 'IN_PROGRESS',
     players,
     lastUpdated: new Date().toISOString(),
   };
 }
 
-// ── Cache / getScores ──────────────────────────────────────────────────────
+// ── ESPN fallback fetch + parse ────────────────────────────────────────────
+
+const ESPN_URL = 'https://site.api.espn.com/apis/site/v2/sports/golf/pga/leaderboard';
+
+async function fetchESPNScores() {
+  const res = await fetch(ESPN_URL, {
+    headers: { 'User-Agent': 'MastersPoolTracker/1.0' },
+    signal: AbortSignal.timeout(10000),
+  });
+  if (!res.ok) throw new Error(`ESPN returned ${res.status}`);
+  return res.json();
+}
+
+function parseESPNData(json) {
+  const event = json?.events?.[0];
+  const comp = event?.competitions?.[0];
+  if (!comp) return null;
+
+  const players = {};
+  for (const c of comp.competitors ?? []) {
+    const name = c.athlete?.displayName;
+    if (!name) continue;
+    const rounds = (c.linescores ?? []).map(ls => {
+      const grossInt = parseInt(ls.value, 10);
+      return { score: grossToNet(ls.value), display: isNaN(grossInt) ? '-' : String(grossInt) };
+    });
+    // Pad to 4 rounds
+    while (rounds.length < 4) rounds.push({ score: null, display: '-' });
+
+    const statusName = c.status?.type?.name ?? '';
+    let status = 'active';
+    if (/CUT/i.test(statusName)) status = 'cut';
+    else if (/WD|WITHDRAWN/i.test(statusName)) status = 'wd';
+    else if (/DQ/i.test(statusName)) status = 'dq';
+
+    players[normalizeName(name)] = {
+      name,
+      total: parseScore(c.score) ?? 0,
+      rounds,
+      status,
+      thru: c.status?.thru ?? null,
+      position: c.status?.position?.displayText ?? '',
+      currentRound: c.status?.period ?? null,
+    };
+  }
+
+  if (Object.keys(players).length === 0) return null;
+
+  const currentRound = comp.status?.period ?? 1;
+  const compStatus = comp.status?.type?.name ?? '';
+
+  return {
+    eventName: event.shortName || event.name || 'Masters Tournament',
+    source: 'espn',
+    currentRound,
+    eventStatus: /COMPLETE/i.test(compStatus) ? 'FINAL' : 'IN_PROGRESS',
+    players,
+    lastUpdated: new Date().toISOString(),
+  };
+}
+
+// ── Cache / getScores (masters.com → ESPN fallback) ────────────────────────
 
 async function getScores() {
   const now = Date.now();
@@ -148,18 +183,31 @@ async function getScores() {
     return cache.data;
   }
 
+  // Try masters.com first, fall back to ESPN
+  let parsed = null;
   try {
     const raw = await fetchMastersScores();
-    const parsed = parseMastersData(raw);
-    if (parsed) {
-      cache.data = parsed;
-      cache.lastFetched = now;
-    }
-    return cache.data;
+    parsed = parseMastersData(raw);
+    if (parsed) console.log('[scores] Fetched from masters.com');
   } catch (err) {
-    console.error('[scores] Fetch failed:', err.message);
-    return cache.data; // return stale data rather than nothing
+    console.warn('[scores] masters.com failed:', err.message, '— trying ESPN');
   }
+
+  if (!parsed) {
+    try {
+      const raw = await fetchESPNScores();
+      parsed = parseESPNData(raw);
+      if (parsed) console.log('[scores] Fetched from ESPN');
+    } catch (err) {
+      console.error('[scores] ESPN also failed:', err.message);
+    }
+  }
+
+  if (parsed) {
+    cache.data = parsed;
+    cache.lastFetched = now;
+  }
+  return cache.data;
 }
 
 // Find a pick in the player map using multiple strategies
@@ -324,7 +372,48 @@ app.get('/api/leaderboard', async (req, res) => {
 app.post('/api/refresh', async (req, res) => {
   cache.lastFetched = null;
   const scores = await getScores();
-  res.json({ ok: true, lastUpdated: scores?.lastUpdated ?? null });
+  res.json({ ok: true, source: scores?.source ?? null, lastUpdated: scores?.lastUpdated ?? null });
+});
+
+// Debug — raw responses from both sources (useful for diagnosing parsing issues)
+app.get('/api/debug', async (req, res) => {
+  const results = {};
+
+  try {
+    const raw = await fetchMastersScores();
+    const parsed = parseMastersData(raw);
+    results.masters = {
+      ok: true,
+      playerCount: parsed ? Object.keys(parsed.players).length : 0,
+      topKeys: Object.keys(parsed?.players ?? {}).slice(0, 5),
+      sampleRaw: (raw?.data?.players ?? raw?.players ?? [])[0] ?? null,
+    };
+  } catch (err) {
+    results.masters = { ok: false, error: err.message };
+  }
+
+  try {
+    const raw = await fetchESPNScores();
+    const parsed = parseESPNData(raw);
+    results.espn = {
+      ok: true,
+      eventName: raw?.events?.[0]?.name ?? null,
+      playerCount: parsed ? Object.keys(parsed.players).length : 0,
+      topKeys: Object.keys(parsed?.players ?? {}).slice(0, 5),
+      sampleRaw: raw?.events?.[0]?.competitions?.[0]?.competitors?.[0] ?? null,
+    };
+  } catch (err) {
+    results.espn = { ok: false, error: err.message };
+  }
+
+  results.cache = {
+    hasData: !!cache.data,
+    source: cache.data?.source ?? null,
+    playerCount: cache.data ? Object.keys(cache.data.players).length : 0,
+    lastFetched: cache.lastFetched ? new Date(cache.lastFetched).toISOString() : null,
+  };
+
+  res.json(results);
 });
 
 // Export for Vercel (serverless); also listen when run directly (local dev)
