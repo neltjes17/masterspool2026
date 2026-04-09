@@ -260,6 +260,7 @@ app.get('/api/standings', async (req, res) => {
     const scores = await getScores();
     const standings = calculateStandings(participants, scores);
 
+    res.set('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=30');
     res.json({
       standings,
       eventInfo: scores
@@ -306,6 +307,7 @@ app.get('/api/leaderboard', async (req, res) => {
       inPool: pickedKeys.has(normalizeName(p.name)),
     }));
 
+    res.set('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=30');
     res.json({
       players: formatted,
       eventName: scores.eventName,
@@ -325,6 +327,11 @@ app.post('/api/refresh', async (req, res) => {
   res.json({ ok: true, lastUpdated: scores?.lastUpdated ?? null });
 });
 
-app.listen(PORT, () => {
-  console.log(`Masters Pool Tracker → http://localhost:${PORT}`);
-});
+// Export for Vercel (serverless); also listen when run directly (local dev)
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Masters Pool Tracker → http://localhost:${PORT}`);
+  });
+}
+
+module.exports = app;
