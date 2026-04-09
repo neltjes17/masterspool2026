@@ -5,101 +5,143 @@ const fs = require('fs');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// In-memory score cache
+// ── Constants ──────────────────────────────────────────────────────────────
+
+const MASTERS_FEED_URL = 'https://www.masters.com/en_US/scores/feeds/2026/scores.json';
+const COURSE_PAR = 72;
+
+// In-memory score cache — poll every 60 s during live rounds
 const cache = {
   data: null,
   lastFetched: null,
-  ttl: 3 * 60 * 1000, // 3 minutes
+  ttl: 60 * 1000, // 60 seconds
 };
 
-// Normalize a player name for matching: lowercase, trim, remove accents
+// ── Name helpers ───────────────────────────────────────────────────────────
+
+// Normalize a player name: lowercase, trim, remove accents, handle "Last, First"
 function normalizeName(name) {
-  return name
-    .toLowerCase()
-    .trim()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '');
+  if (!name) return '';
+  let s = name.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  // masters.com sometimes returns "McIlroy, Rory" — flip to "rory mcilroy"
+  if (s.includes(',')) {
+    const [last, first] = s.split(',').map(p => p.trim());
+    s = `${first} ${last}`;
+  }
+  return s;
 }
 
-// Parse a golf score string to integer (e.g. "E" -> 0, "-5" -> -5, "+3" -> 3)
+// ── Score parsers ──────────────────────────────────────────────────────────
+
+// Parse a net score string ("E", "-5", "+3", "0") → integer or null
 function parseScore(str) {
-  if (!str || str === '-' || str === '--') return null;
-  if (str === 'E' || str === 'Even') return 0;
-  const n = parseInt(str, 10);
+  if (str === null || str === undefined || str === '') return null;
+  const s = String(str).trim();
+  if (s === 'E' || s === '0') return 0;
+  if (s === '-' || s === '--') return null;
+  const n = parseInt(s, 10);
   return isNaN(n) ? null : n;
 }
 
-// Fetch live Masters/PGA leaderboard from ESPN's unofficial API
-async function fetchESPNScores() {
-  const url = 'https://site.api.espn.com/apis/site/v2/sports/golf/pga/leaderboard';
-  const res = await fetch(url, {
-    headers: { 'User-Agent': 'MastersPoolTracker/1.0' },
+// Parse a gross score string ("67") → net-to-par integer or null
+function grossToNet(grossStr) {
+  const g = parseInt(grossStr, 10);
+  return isNaN(g) ? null : g - COURSE_PAR;
+}
+
+// Parse a "thru" value: "F" → "F", "14" → 14, "" → null
+function parseThru(thruStr) {
+  const s = String(thruStr ?? '').trim();
+  if (s === 'F') return 'F';
+  const n = parseInt(s, 10);
+  return isNaN(n) ? null : n;
+}
+
+// ── masters.com feed fetch ─────────────────────────────────────────────────
+
+async function fetchMastersScores() {
+  const res = await fetch(MASTERS_FEED_URL, {
+    headers: {
+      Referer: 'https://www.masters.com/',
+      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/124 Safari/537.36',
+    },
     signal: AbortSignal.timeout(10000),
   });
-  if (!res.ok) throw new Error(`ESPN API returned ${res.status}`);
+  if (!res.ok) throw new Error(`masters.com feed returned ${res.status}`);
   return res.json();
 }
 
-// Parse ESPN response into a flat player map keyed by normalized name
-function parseESPNData(espnJson) {
-  const event = espnJson?.events?.[0];
-  if (!event) return null;
+// ── masters.com feed parser ────────────────────────────────────────────────
 
-  const comp = event.competitions?.[0];
-  if (!comp) return null;
+// Parse a single player entry from the masters.com feed.
+// Normalizes into the internal shape used by the rest of the server:
+//   { name, total, rounds[{score,display}], status, thru, position, currentRound }
+function parsePlayer(raw) {
+  const roundDefs = [
+    { round: 1, gross: raw.round1 },
+    { round: 2, gross: raw.round2 },
+    { round: 3, gross: raw.round3 },
+    { round: 4, gross: raw.round4 },
+  ];
 
-  const players = {};
-
-  for (const competitor of comp.competitors || []) {
-    const displayName = competitor.athlete?.displayName;
-    if (!displayName) continue;
-
-    const key = normalizeName(displayName);
-    const totalStr = competitor.score;
-    const total = parseScore(totalStr) ?? 0;
-
-    // Round-by-round scores
-    const rounds = (competitor.linescores || []).map(ls => ({
-      score: parseScore(ls.value),
-      display: ls.value ?? '-',
-    }));
-
-    // Status: CUT, WD, DQ, active, complete
-    const statusName = competitor.status?.type?.name ?? '';
-    let status = 'active';
-    if (/CUT/i.test(statusName)) status = 'cut';
-    else if (/WD/i.test(statusName) || /WITHDRAWN/i.test(statusName)) status = 'wd';
-    else if (/DQ/i.test(statusName)) status = 'dq';
-    else if (/COMPLETE/i.test(statusName)) status = 'complete';
-
-    const thru = competitor.status?.thru ?? null;
-    const position = competitor.status?.position?.displayText ?? '';
-    const currentRound = competitor.status?.period ?? null;
-
-    players[key] = {
-      name: displayName,
-      total,
-      rounds,
-      status,
-      thru,
-      position,
-      currentRound,
+  const rounds = roundDefs.map(({ gross }) => {
+    const net = grossToNet(gross);
+    const grossInt = parseInt(gross, 10);
+    return {
+      score: net,                          // net-to-par (null if not played)
+      display: isNaN(grossInt) ? '-' : String(grossInt),  // gross score string
     };
-  }
+  });
 
-  const currentRound = comp.status?.period ?? 1;
-  const compStatus = comp.status?.type?.name ?? '';
+  // Current round = last round that has a gross score
+  const currentRound = roundDefs.reduce((last, { round, gross }) => {
+    return parseInt(gross, 10) > 0 ? round : last;
+  }, null);
+
+  const status = (raw.status || 'active').toLowerCase();
 
   return {
-    eventName: event.shortName || event.name || 'Masters Tournament',
+    name: raw.full_name || raw.display_name,
+    total: parseScore(raw.topar) ?? 0,   // overall net score
+    rounds,
+    status,                               // active | cut | wd | dq
+    thru: parseThru(raw.thru),
+    position: raw.pos || '',
     currentRound,
-    eventStatus: compStatus,
+  };
+}
+
+// Parse the full masters.com JSON payload → internal players map
+function parseMastersData(json) {
+  const rawPlayers = json?.data?.players ?? json?.players ?? [];
+  if (rawPlayers.length === 0) return null;
+
+  const players = {};
+  for (const raw of rawPlayers) {
+    const player = parsePlayer(raw);
+    if (!player.name) continue;
+    players[normalizeName(player.name)] = player;
+  }
+
+  // Derive current round from the field
+  const activePlayers = Object.values(players).filter(p => p.status === 'active');
+  const currentRound = activePlayers.reduce((max, p) => Math.max(max, p.currentRound ?? 1), 1);
+
+  // Derive event status
+  const allFinished = activePlayers.every(p => p.thru === 'F' || p.thru === 18);
+  const eventStatus = (currentRound === 4 && allFinished) ? 'FINAL' : 'IN_PROGRESS';
+
+  return {
+    eventName: 'Masters Tournament',
+    currentRound,
+    eventStatus,
     players,
     lastUpdated: new Date().toISOString(),
   };
 }
 
-// Get scores from cache or fetch fresh
+// ── Cache / getScores ──────────────────────────────────────────────────────
+
 async function getScores() {
   const now = Date.now();
   if (cache.data && cache.lastFetched && now - cache.lastFetched < cache.ttl) {
@@ -107,8 +149,8 @@ async function getScores() {
   }
 
   try {
-    const raw = await fetchESPNScores();
-    const parsed = parseESPNData(raw);
+    const raw = await fetchMastersScores();
+    const parsed = parseMastersData(raw);
     if (parsed) {
       cache.data = parsed;
       cache.lastFetched = now;
