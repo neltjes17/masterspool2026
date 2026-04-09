@@ -116,7 +116,7 @@ function parseMastersData(json) {
 
 // ── ESPN fallback fetch + parse ────────────────────────────────────────────
 
-const ESPN_URL = 'https://site.api.espn.com/apis/site/v2/sports/golf/pga/leaderboard';
+const ESPN_URL = 'https://site.api.espn.com/apis/site/v2/sports/golf/leaderboard?league=pga';
 
 async function fetchESPNScores() {
   const res = await fetch(ESPN_URL, {
@@ -382,11 +382,36 @@ app.get('/api/debug', async (req, res) => {
   try {
     const raw = await fetchMastersScores();
     const parsed = parseMastersData(raw);
+    // Walk up to 3 levels deep to expose the actual shape
+    const topLevelKeys = Object.keys(raw ?? {});
+    const secondLevel = {};
+    for (const k of topLevelKeys) {
+      const v = raw[k];
+      if (v && typeof v === 'object' && !Array.isArray(v)) {
+        secondLevel[k] = Object.keys(v);
+      } else if (Array.isArray(v)) {
+        secondLevel[k] = `Array(${v.length})`;
+      } else {
+        secondLevel[k] = v;
+      }
+    }
+    // Find any array that looks like it might contain players
+    const arrayPaths = [];
+    function findArrays(obj, path = '') {
+      if (!obj || typeof obj !== 'object') return;
+      for (const [k, v] of Object.entries(obj)) {
+        const p = path ? `${path}.${k}` : k;
+        if (Array.isArray(v)) arrayPaths.push({ path: p, length: v.length, sample: v[0] });
+        else if (typeof v === 'object') findArrays(v, p);
+      }
+    }
+    findArrays(raw);
     results.masters = {
       ok: true,
       playerCount: parsed ? Object.keys(parsed.players).length : 0,
-      topKeys: Object.keys(parsed?.players ?? {}).slice(0, 5),
-      sampleRaw: (raw?.data?.players ?? raw?.players ?? [])[0] ?? null,
+      topLevelKeys,
+      secondLevel,
+      arrayPaths: arrayPaths.slice(0, 10),
     };
   } catch (err) {
     results.masters = { ok: false, error: err.message };
