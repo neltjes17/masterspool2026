@@ -707,6 +707,7 @@ body {
   --shadow:      0 2px 16px rgba(0,0,0,.6);
 }
 
+[data-theme="dark"] .lb-table thead { color: #ffffff; }
 [data-theme="dark"] .section-title      { color: var(--gold-light); }
 [data-theme="dark"] .header-title h1    { color: var(--gold-light); }
 [data-theme="dark"] .participant-name   { color: var(--gold-light); }
