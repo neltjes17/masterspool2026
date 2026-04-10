@@ -206,6 +206,21 @@ const AUGUSTA_PAR = [4, 5, 4, 3, 4, 3, 4, 5, 4, 4, 4, 3, 5, 4, 5, 3, 4, 4];
 // Track which players have their scorecard expanded (survives re-renders)
 const expandedPlayers = new Set();
 
+// Current round net-to-par score: use direct round score if available (finished),
+// otherwise infer from total minus completed previous rounds (mid-round).
+function getTodayScore(player, currentRound) {
+  if (!currentRound) return null;
+  const round = player.rounds?.[currentRound - 1];
+  if (round?.score != null) return round.score;
+  const thru = player.thru;
+  const isMidRound = typeof thru === 'number' && thru > 0;
+  if (!isMidRound) return null;
+  const prevSum = (player.rounds ?? [])
+    .slice(0, currentRound - 1)
+    .reduce((s, r) => s + (r?.score ?? 0), 0);
+  return (player.total ?? 0) - prevSum;
+}
+
 function holeScoreBadge(score, par) {
   if (score === null || score === undefined) return '<span class="hs-empty">-</span>';
   if (par === null || par === undefined) return `<span class="hs">${score}</span>`;
@@ -222,7 +237,7 @@ function buildScorecardRow(player, currentRound) {
   const tr = document.createElement('tr');
   tr.className = 'scorecard-row';
   const td = document.createElement('td');
-  td.colSpan = 9;
+  td.colSpan = 10;
 
   // Use the latest round that has hole data, preferring currentRound
   let holes = null;
@@ -343,13 +358,14 @@ function renderLeaderboard(data) {
   const table = document.createElement('table');
   table.className = 'lb-table';
 
-  // 9 columns: Pos, Player, Total, R1-R4, Thru, expand-arrow
+  // 10 columns: Pos, Player, Total, Today, R1-R4, Thru, expand-arrow
   table.innerHTML = `
     <thead>
       <tr>
         <th>Pos</th>
         <th>Player</th>
         <th class="num">Total</th>
+        <th class="num">Today</th>
         <th class="num">R1</th>
         <th class="num">R2</th>
         <th class="num">R3</th>
@@ -384,7 +400,7 @@ function renderLeaderboard(data) {
       const cutRow = document.createElement('tr');
       cutRow.className = 'divider-row cut-divider-row';
       const cutTd = document.createElement('td');
-      cutTd.colSpan = 9;
+      cutTd.colSpan = 10;
       cutTd.className = 'divider-cell';
       cutTd.textContent = '— CUT —';
       cutRow.appendChild(cutTd);
@@ -396,7 +412,7 @@ function renderLeaderboard(data) {
       const wdRow = document.createElement('tr');
       wdRow.className = 'divider-row wd-divider-row';
       const wdTd = document.createElement('td');
-      wdTd.colSpan = 9;
+      wdTd.colSpan = 10;
       wdTd.className = 'divider-cell';
       wdTd.textContent = '— WITHDRAWN —';
       wdRow.appendChild(wdTd);
@@ -420,6 +436,12 @@ function renderLeaderboard(data) {
 
     // Total
     tr.appendChild(el('td', `num lb-score-${scoreClass(player.total)}`, player.totalDisplay));
+
+    // Today (current round net score, live while mid-round)
+    const todayScore = getTodayScore(player, currentRound);
+    const todayDisplay = todayScore !== null ? formatNet(todayScore) : '-';
+    const todayCls = todayScore !== null ? `lb-today ${scoreClass(todayScore)}` : 'lb-today lb-today-empty';
+    tr.appendChild(el('td', `num ${todayCls}`, todayDisplay));
 
     // Round scores
     for (let r = 0; r < 4; r++) {

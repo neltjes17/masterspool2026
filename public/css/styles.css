@@ -514,6 +514,12 @@ body {
 .lb-score-over  { color: var(--red); font-weight: bold; }
 .lb-score-even  { color: var(--gray-dark); font-weight: bold; }
 
+.lb-today           { font-weight: bold; }
+.lb-today.under     { color: var(--green); }
+.lb-today.over      { color: var(--red); }
+.lb-today.even      { color: var(--gray-dark); }
+.lb-today-empty     { color: var(--gray); font-weight: normal; }
+
 .lb-round { color: var(--gray-dark); }
 .lb-thru { color: var(--gray); font-size: 0.78rem; }
 .lb-status-cut  { color: var(--red); font-size: 0.75rem; text-transform: uppercase; font-weight: bold; }
