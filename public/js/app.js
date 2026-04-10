@@ -92,7 +92,18 @@ function renderStandingCard(standing) {
 
   // Card header
   const header = el('div', 'card-header');
-  header.appendChild(el('div', 'rank-number', standing.rank === 1 ? '&#127942;' : `${standing.rank}`));
+
+  // Rank + delta
+  const rankWrap = el('div', 'rank-wrap');
+  rankWrap.appendChild(el('div', 'rank-number', standing.rank === 1 ? '&#127942;' : `${standing.rank}`));
+  if (standing.rankDelta !== null && standing.rankDelta !== undefined) {
+    let cls, text;
+    if (standing.rankDelta > 0)      { cls = 'rank-delta up';   text = `&#9650;${standing.rankDelta}`; }
+    else if (standing.rankDelta < 0) { cls = 'rank-delta down'; text = `&#9660;${Math.abs(standing.rankDelta)}`; }
+    else                             { cls = 'rank-delta same'; text = '&mdash;'; }
+    rankWrap.appendChild(el('div', cls, text));
+  }
+  header.appendChild(rankWrap);
   header.appendChild(el('div', 'participant-name', escHtml(standing.name)));
 
   const scoreBlock = el('div', '');

@@ -242,15 +242,34 @@ body {
 
 .standing-card.rank-1 .card-header { background: #fdf8ec; }
 
+.rank-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 36px;
+}
+
 .rank-number {
   font-size: 1.4rem;
   font-weight: bold;
   color: var(--gray);
-  min-width: 36px;
   text-align: center;
   font-family: sans-serif;
+  line-height: 1;
 }
 .standing-card.rank-1 .rank-number { color: var(--gold); }
+
+.rank-delta {
+  font-family: sans-serif;
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.01em;
+}
+.rank-delta.up   { color: #2e7d32; }
+.rank-delta.down { color: var(--red); }
+.rank-delta.same { color: var(--gray); }
 
 .participant-name {
   font-size: 1.15rem;

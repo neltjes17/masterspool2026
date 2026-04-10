@@ -20,6 +20,32 @@ const cache = {
 };
 
 const STALE_THRESHOLD_MS = 10 * 60 * 1000; // 10 minutes
+const HISTORY_PATH = path.join(__dirname, 'data', 'standings_history.json');
+
+// Persist per-round standings snapshots so rank deltas survive restarts
+function loadStandingsHistory() {
+  if (!fs.existsSync(HISTORY_PATH)) return {};
+  try { return JSON.parse(fs.readFileSync(HISTORY_PATH, 'utf8')); }
+  catch { return {}; }
+}
+
+function saveRoundSnapshot(round, standings) {
+  const history = loadStandingsHistory();
+  history[String(round)] = standings.map(s => ({ name: s.name, rank: s.rank }));
+  try { fs.writeFileSync(HISTORY_PATH, JSON.stringify(history, null, 2)); }
+  catch (err) { console.warn('[history] Failed to save snapshot:', err.message); }
+}
+
+// Returns { participantName → rank } for the round before currentRound
+function getPreviousRoundRanks(currentRound) {
+  const prevRound = currentRound - 1;
+  if (prevRound < 1) return {};
+  const snapshot = loadStandingsHistory()[String(prevRound)];
+  if (!snapshot) return {};
+  const ranks = {};
+  for (const s of snapshot) ranks[s.name] = s.rank;
+  return ranks;
+}
 
 // Returns a stale-data warning object when both sources are failing and
 // cached data is older than STALE_THRESHOLD_MS, otherwise null.
@@ -380,9 +406,21 @@ app.get('/api/standings', async (req, res) => {
     const scores = await getScores();
     const standings = calculateStandings(participants, scores);
 
+    // Snapshot standings when a round finishes so next round can show deltas
+    if (scores && scores.eventStatus !== 'IN_PROGRESS') {
+      saveRoundSnapshot(scores.currentRound, standings);
+    }
+
+    // Attach rank delta (positive = moved up) vs previous round snapshot
+    const prevRanks = scores ? getPreviousRoundRanks(scores.currentRound) : {};
+    const standingsWithDelta = standings.map(s => ({
+      ...s,
+      rankDelta: prevRanks[s.name] !== undefined ? prevRanks[s.name] - s.rank : null,
+    }));
+
     res.set('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=30');
     res.json({
-      standings,
+      standings: standingsWithDelta,
       eventInfo: scores
         ? {
             eventName: scores.eventName,
