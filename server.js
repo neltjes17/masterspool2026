@@ -383,11 +383,11 @@ function findPlayer(pick, playerMap) {
     if (key.includes(pickKey) || pickKey.includes(key)) return player;
   }
 
-  // 3. Last-name-only match
+  // 3. Last-name-only match (minimum 2 chars to handle short surnames like "Im")
   const lastName = pickKey.split(' ').pop();
-  if (lastName.length >= 4) {
+  if (lastName.length >= 2) {
     for (const [key, player] of Object.entries(playerMap)) {
-      if (key.endsWith(lastName) || key.includes(lastName)) return player;
+      if (key.endsWith(` ${lastName}`) || key === lastName) return player;
     }
   }
 
