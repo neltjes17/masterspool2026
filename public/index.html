@@ -28,6 +28,13 @@
     </div>
   </header>
 
+  <!-- Stale data warning — shown only when both score sources are failing -->
+  <div id="staleBanner" class="stale-banner" hidden>
+    <span class="stale-icon">&#9888;</span>
+    <span id="staleMessage">Score data may be outdated — live sources are temporarily unavailable.</span>
+    <button id="staleDismiss" class="stale-dismiss" aria-label="Dismiss">&times;</button>
+  </div>
+
   <main class="main-content">
 
     <!-- Pool Standings -->

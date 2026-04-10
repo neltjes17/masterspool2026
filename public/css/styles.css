@@ -126,6 +126,41 @@ body {
 .refresh-btn.spinning { animation: spin 0.7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* ── Stale Data Banner ────────────────────────────────────────────────────── */
+.stale-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 24px;
+  background: #7a4f00;
+  color: #fff8ed;
+  font-family: sans-serif;
+  font-size: 0.85rem;
+}
+
+.stale-banner[hidden] { display: none; }
+
+.stale-icon { font-size: 1.1rem; flex-shrink: 0; }
+
+.stale-banner span { flex: 1; }
+
+.stale-dismiss {
+  background: none;
+  border: 1px solid rgba(255,255,255,0.4);
+  color: inherit;
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.stale-dismiss:hover { background: rgba(255,255,255,0.15); }
+
 /* ── Main Content ─────────────────────────────────────────────────────────── */
 .main-content {
   max-width: 1200px;

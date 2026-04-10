@@ -254,6 +254,26 @@ function renderLeaderboard(data) {
   container.appendChild(legend);
 }
 
+// ── Stale data banner ──────────────────────────────────────────────────────
+
+let staleBannerDismissed = false;
+
+function updateStaleBanner(staleWarning) {
+  const banner = document.getElementById('staleBanner');
+  if (!banner) return;
+  if (staleBannerDismissed) return;
+
+  if (staleWarning?.isStale) {
+    const msg = document.getElementById('staleMessage');
+    if (msg) {
+      msg.textContent = `Score data is ${staleWarning.minutesOld} minute${staleWarning.minutesOld !== 1 ? 's' : ''} old — live sources are temporarily unavailable.`;
+    }
+    banner.hidden = false;
+  } else {
+    banner.hidden = true;
+  }
+}
+
 // ── Header updates ─────────────────────────────────────────────────────────
 
 function updateHeader(eventInfo) {
@@ -282,6 +302,7 @@ async function loadStandings() {
     const data = await res.json();
     renderStandings(data);
     updateHeader(data.eventInfo);
+    updateStaleBanner(data.staleWarning);
   } catch (err) {
     document.getElementById('standingsContainer').innerHTML =
       `<div class="error-state">Could not load standings: ${escHtml(err.message)}</div>`;
@@ -331,4 +352,9 @@ document.addEventListener('DOMContentLoaded', () => {
   setInterval(() => refreshAll(), REFRESH_INTERVAL);
 
   document.getElementById('refreshBtn')?.addEventListener('click', () => refreshAll(true));
+
+  document.getElementById('staleDismiss')?.addEventListener('click', () => {
+    staleBannerDismissed = true;
+    document.getElementById('staleBanner').hidden = true;
+  });
 });

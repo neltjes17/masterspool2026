@@ -13,9 +13,26 @@ const COURSE_PAR = 72;
 // In-memory score cache — poll every 60 s during live rounds
 const cache = {
   data: null,
-  lastFetched: null,
-  ttl: 60 * 1000, // 60 seconds
+  lastFetched: null,      // timestamp of last SUCCESSFUL fetch
+  lastAttempt: null,      // timestamp of last fetch attempt (success or failure)
+  lastAttemptFailed: false, // true when last attempt returned nothing from either source
+  ttl: 60 * 1000,         // 60 seconds
 };
+
+const STALE_THRESHOLD_MS = 10 * 60 * 1000; // 10 minutes
+
+// Returns a stale-data warning object when both sources are failing and
+// cached data is older than STALE_THRESHOLD_MS, otherwise null.
+function getStaleWarning() {
+  if (!cache.data || !cache.lastAttemptFailed) return null;
+  const ageMs = Date.now() - (cache.lastFetched ?? 0);
+  if (ageMs < STALE_THRESHOLD_MS) return null;
+  return {
+    isStale: true,
+    minutesOld: Math.floor(ageMs / 60000),
+    lastUpdated: cache.data.lastUpdated,
+  };
+}
 
 // ── Name helpers ───────────────────────────────────────────────────────────
 
@@ -225,6 +242,9 @@ async function getScores() {
     }
   }
 
+  cache.lastAttempt = now;
+  cache.lastAttemptFailed = !parsed;
+
   if (parsed) {
     cache.data = parsed;
     cache.lastFetched = now;
@@ -343,6 +363,7 @@ app.get('/api/standings', async (req, res) => {
         : null,
       hasParticipants: participants.length > 0,
       participantCount: participants.length,
+      staleWarning: getStaleWarning(),
     });
   } catch (err) {
     console.error('[standings]', err);
@@ -389,6 +410,7 @@ app.get('/api/leaderboard', async (req, res) => {
       eventName: scores.eventName,
       currentRound: scores.currentRound,
       lastUpdated: scores.lastUpdated,
+      staleWarning: getStaleWarning(),
     });
   } catch (err) {
     console.error('[leaderboard]', err);
