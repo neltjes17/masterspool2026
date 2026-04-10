@@ -132,6 +132,8 @@ function parseMastersData(json) {
       let holes = null;
       if (Array.isArray(holesRaw) && holesRaw.length > 0) {
         holes = holesRaw.map((h, i) => {
+          // null/undefined means hole not yet played (player still on course)
+          if (h === null || h === undefined) return { hole: i + 1, score: null, par: null };
           if (typeof h === 'number') return { hole: i + 1, score: h, par: null };
           // Values may come as strings ("4") or integers (4)
           const score = parseInt(h.score ?? h.strokes ?? h.value ?? h.s, 10);
@@ -240,7 +242,16 @@ function parseESPNData(json) {
       const ls = lsMap[period];
       if (!ls || ls.value == null) return { score: null, display: '-', holes: null };
       const grossInt = parseInt(ls.value, 10);
-      return { score: grossToNet(ls.value), display: isNaN(grossInt) ? '-' : String(grossInt), holes: null };
+      // ESPN linescores include outScore (front 9) and inScore (back 9) gross totals
+      const outScore = ls.outScore != null ? parseInt(ls.outScore, 10) : null;
+      const inScore  = ls.inScore  != null ? parseInt(ls.inScore,  10) : null;
+      return {
+        score: grossToNet(ls.value),
+        display: isNaN(grossInt) ? '-' : String(grossInt),
+        outScore: isNaN(outScore) ? null : outScore,
+        inScore:  isNaN(inScore)  ? null : inScore,
+        holes: null,
+      };
     });
 
     const statusName = c.status?.type?.name ?? '';

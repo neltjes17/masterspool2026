@@ -194,7 +194,44 @@ function buildScorecardRow(player, currentRound) {
   }
 
   if (!holes) {
-    td.innerHTML = '<div class="scorecard-unavailable">Hole-by-hole data unavailable for this round.</div>';
+    // Fall back to ESPN front/back 9 summary when full hole data isn't available
+    let summary = null;
+    for (let r = shownRound; r >= 1; r--) {
+      const rd = player.rounds?.[r - 1];
+      if (rd && (rd.outScore != null || rd.inScore != null)) {
+        const frontPar = AUGUSTA_PAR.slice(0, 9).reduce((s, p) => s + p, 0); // 36
+        const backPar  = AUGUSTA_PAR.slice(9).reduce((s, p) => s + p, 0);   // 36
+        const total    = rd.outScore != null && rd.inScore != null ? rd.outScore + rd.inScore : null;
+        summary = `<div class="scorecard-summary">
+          <div class="scorecard-title">Round ${r} · Scorecard</div>
+          <table class="sc-table">
+            <thead><tr>
+              <th class="sc-label"></th>
+              <th class="sc-subtotal">OUT</th>
+              <th class="sc-subtotal">IN</th>
+              <th class="sc-subtotal">TOT</th>
+            </tr></thead>
+            <tbody>
+              <tr>
+                <td class="sc-label">Par</td>
+                <td class="sc-subtotal">${frontPar}</td>
+                <td class="sc-subtotal">${backPar}</td>
+                <td class="sc-subtotal">${frontPar + backPar}</td>
+              </tr>
+              <tr>
+                <td class="sc-label">Score</td>
+                <td class="sc-subtotal sc-score-total">${rd.outScore ?? '—'}</td>
+                <td class="sc-subtotal sc-score-total">${rd.inScore ?? '—'}</td>
+                <td class="sc-subtotal sc-score-total">${total ?? '—'}</td>
+              </tr>
+            </tbody>
+          </table>
+          <p class="scorecard-note">Hole-by-hole data loads after refresh when masters.com is available.</p>
+        </div>`;
+        break;
+      }
+    }
+    td.innerHTML = summary ?? '<div class="scorecard-unavailable">Scorecard data unavailable for this round.</div>';
     tr.appendChild(td);
     return tr;
   }
