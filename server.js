@@ -121,12 +121,26 @@ function parseMastersData(json) {
 
   const players = {};
   for (const raw of rawPlayers) {
-    // Each round is now an object: { total: 67, roundStatus: "Finished", ... }
+    // Each round is now an object: { total: 67, roundStatus: "Finished", scores: [...] }
     const roundDefs = [raw.round1, raw.round2, raw.round3, raw.round4];
     const rounds = roundDefs.map(r => {
       const gross = r?.total;          // integer gross score, null if not played
       const grossInt = parseInt(gross, 10);
-      return { score: grossToNet(gross), display: isNaN(grossInt) ? '-' : String(grossInt) };
+
+      // Hole-by-hole scores: masters.com exposes r.scores[] per round
+      let holes = null;
+      if (Array.isArray(r?.scores) && r.scores.length > 0) {
+        holes = r.scores.map((h, i) => {
+          if (typeof h === 'number') return { hole: i + 1, score: h, par: null };
+          return {
+            hole: h.hole ?? h.holeNumber ?? (i + 1),
+            score: h.score ?? h.strokes ?? null,
+            par:   h.par ?? null,
+          };
+        });
+      }
+
+      return { score: grossToNet(gross), display: isNaN(grossInt) ? '-' : String(grossInt), holes };
     });
     const currentRound = roundDefs.reduce((last, r, i) =>
       r?.total != null ? i + 1 : last, null);
@@ -524,12 +538,15 @@ app.get('/api/debug', async (req, res) => {
       }
     }
     findArrays(raw);
+    // Expose raw round objects from first player so we can verify hole score fields
+    const sampleRaw = raw?.data?.player?.[0] ?? raw?.player?.[0] ?? null;
     results.masters = {
       ok: true,
       playerCount: parsed ? Object.keys(parsed.players).length : 0,
       topLevelKeys,
       secondLevel,
       arrayPaths: arrayPaths.slice(0, 10),
+      samplePlayerRound1: sampleRaw?.round1 ?? null,
     };
   } catch (err) {
     results.masters = { ok: false, error: err.message };

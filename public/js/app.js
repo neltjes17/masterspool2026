@@ -159,6 +159,99 @@ function renderStandings(data) {
   }
 }
 
+// ── Leaderboard scorecard helpers ─────────────────────────────────────────
+
+// Augusta National par by hole (1-18)
+const AUGUSTA_PAR = [4, 5, 4, 3, 4, 3, 4, 5, 4, 4, 4, 3, 4, 5, 3, 4, 3, 4];
+
+// Track which players have their scorecard expanded (survives re-renders)
+const expandedPlayers = new Set();
+
+function holeScoreBadge(score, par) {
+  if (score === null || score === undefined) return '<span class="hs-empty">-</span>';
+  if (par === null || par === undefined) return `<span class="hs">${score}</span>`;
+  const diff = score - par;
+  let cls = 'hs';
+  if (diff <= -2) cls += ' hs-eagle';
+  else if (diff === -1) cls += ' hs-birdie';
+  else if (diff === 1) cls += ' hs-bogey';
+  else if (diff >= 2) cls += ' hs-double';
+  return `<span class="${cls}">${score}</span>`;
+}
+
+function buildScorecardRow(player, currentRound) {
+  const tr = document.createElement('tr');
+  tr.className = 'scorecard-row';
+  const td = document.createElement('td');
+  td.colSpan = 9;
+
+  // Use the latest round that has hole data, preferring currentRound
+  let holes = null;
+  let shownRound = currentRound ?? 1;
+  for (let r = shownRound; r >= 1; r--) {
+    const h = player.rounds?.[r - 1]?.holes;
+    if (h && h.length > 0) { holes = h; shownRound = r; break; }
+  }
+
+  if (!holes) {
+    td.innerHTML = '<div class="scorecard-unavailable">Hole-by-hole data unavailable for this round.</div>';
+    tr.appendChild(td);
+    return tr;
+  }
+
+  const pars   = holes.map((h, i) => h.par ?? AUGUSTA_PAR[i] ?? null);
+  const scores = holes.map(h => h.score ?? null);
+
+  const sumAll = arr => arr.every(v => v !== null) ? arr.reduce((s, v) => s + v, 0) : null;
+
+  const frontPars   = pars.slice(0, 9);
+  const backPars    = pars.slice(9, 18);
+  const frontScores = scores.slice(0, 9);
+  const backScores  = scores.slice(9, 18);
+  const frontParSum   = frontPars.reduce((s, p) => s + (p ?? 0), 0);
+  const backParSum    = backPars.reduce((s, p) => s + (p ?? 0), 0);
+  const frontScoreSum = sumAll(frontScores);
+  const backScoreSum  = sumAll(backScores);
+  const totalScore    = frontScoreSum !== null && backScoreSum !== null
+    ? frontScoreSum + backScoreSum : frontScoreSum ?? null;
+
+  const fmt = v => v !== null && v !== undefined ? v : '-';
+
+  let html = `<div class="scorecard-wrap">
+    <div class="scorecard-title">Round ${shownRound} · Scorecard</div>
+    <table class="sc-table">
+      <thead><tr>
+        <th class="sc-label"></th>`;
+  for (let h = 1; h <= 9; h++)  html += `<th>${h}</th>`;
+  html += `<th class="sc-subtotal">OUT</th>`;
+  for (let h = 10; h <= 18; h++) html += `<th>${h}</th>`;
+  html += `<th class="sc-subtotal">IN</th><th class="sc-subtotal">TOT</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+          <td class="sc-label">Par</td>`;
+  frontPars.forEach(p => { html += `<td>${fmt(p)}</td>`; });
+  html += `<td class="sc-subtotal">${frontParSum}</td>`;
+  backPars.forEach(p => { html += `<td>${fmt(p)}</td>`; });
+  html += `<td class="sc-subtotal">${backParSum}</td><td class="sc-subtotal">${frontParSum + backParSum}</td>
+        </tr>
+        <tr>
+          <td class="sc-label">Score</td>`;
+  frontScores.forEach((s, i) => { html += `<td>${holeScoreBadge(s, pars[i])}</td>`; });
+  html += `<td class="sc-subtotal sc-score-total">${fmt(frontScoreSum)}</td>`;
+  backScores.forEach((s, i)  => { html += `<td>${holeScoreBadge(s, pars[i + 9])}</td>`; });
+  html += `<td class="sc-subtotal sc-score-total">${fmt(backScoreSum)}</td>
+           <td class="sc-subtotal sc-score-total">${fmt(totalScore)}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>`;
+
+  td.innerHTML = html;
+  tr.appendChild(td);
+  return tr;
+}
+
 // ── Leaderboard rendering ──────────────────────────────────────────────────
 
 function renderLeaderboard(data) {
@@ -170,10 +263,11 @@ function renderLeaderboard(data) {
     return;
   }
 
+  const currentRound = data.currentRound ?? 1;
   const table = document.createElement('table');
   table.className = 'lb-table';
 
-  // Header
+  // 9 columns: Pos, Player, Total, R1-R4, Thru, expand-arrow
   table.innerHTML = `
     <thead>
       <tr>
@@ -185,6 +279,7 @@ function renderLeaderboard(data) {
         <th class="num">R3</th>
         <th class="num">R4</th>
         <th class="num">Thru</th>
+        <th class="lb-expand-col"></th>
       </tr>
     </thead>`;
 
@@ -193,14 +288,12 @@ function renderLeaderboard(data) {
   // Determine cut line and WD section positions
   const CUT_POSITION = 50;
   const players = data.players;
-  // WD/DQ players are already sorted to the bottom by the server
   const wdStartIndex = players.findIndex(p => p.status === 'wd' || p.status === 'dq');
   const nonWdCount = wdStartIndex === -1 ? players.length : wdStartIndex;
 
-  // Find cut line: after the 50th player, extended through ties with same score
   let cutAfterIndex = -1;
   if (nonWdCount > CUT_POSITION) {
-    cutAfterIndex = CUT_POSITION - 1; // 0-indexed
+    cutAfterIndex = CUT_POSITION - 1;
     const cutScore = players[cutAfterIndex].total;
     while (cutAfterIndex + 1 < nonWdCount && players[cutAfterIndex + 1].total === cutScore) {
       cutAfterIndex++;
@@ -210,24 +303,24 @@ function renderLeaderboard(data) {
   for (let i = 0; i < players.length; i++) {
     const player = players[i];
 
-    // Insert cut line divider after the last player making the cut
+    // Cut divider
     if (cutAfterIndex >= 0 && i === cutAfterIndex + 1) {
       const cutRow = document.createElement('tr');
       cutRow.className = 'divider-row cut-divider-row';
       const cutTd = document.createElement('td');
-      cutTd.colSpan = 8;
+      cutTd.colSpan = 9;
       cutTd.className = 'divider-cell';
       cutTd.textContent = '— CUT —';
       cutRow.appendChild(cutTd);
       tbody.appendChild(cutRow);
     }
 
-    // Insert WD section divider before first WD player
+    // WD divider
     if (wdStartIndex >= 0 && i === wdStartIndex) {
       const wdRow = document.createElement('tr');
       wdRow.className = 'divider-row wd-divider-row';
       const wdTd = document.createElement('td');
-      wdTd.colSpan = 8;
+      wdTd.colSpan = 9;
       wdTd.className = 'divider-cell';
       wdTd.textContent = '— WITHDRAWN —';
       wdRow.appendChild(wdTd);
@@ -235,47 +328,61 @@ function renderLeaderboard(data) {
     }
 
     const tr = document.createElement('tr');
-
-    // Highlight if in pool (inPool flag set by server)
+    tr.classList.add('expandable-row');
     if (player.inPool) tr.classList.add('in-pool');
     if (player.status === 'cut') tr.classList.add('is-cut');
+    if (expandedPlayers.has(player.name)) tr.classList.add('expanded');
 
     // Position
-    const tdPos = el('td', 'lb-pos', escHtml(player.position || ''));
-    tr.appendChild(tdPos);
+    tr.appendChild(el('td', 'lb-pos', escHtml(player.position || '')));
 
     // Name
     const tdName = el('td', 'lb-name', escHtml(player.name));
-    if (player.inPool) {
-      tdName.innerHTML += '<span class="pool-indicator" title="In pool"></span>';
-    }
+    if (player.inPool) tdName.innerHTML += '<span class="pool-indicator" title="In pool"></span>';
     tr.appendChild(tdName);
 
     // Total
-    const cls = `lb-score-${scoreClass(player.total)}`;
-    tr.appendChild(el('td', `num ${cls}`, player.totalDisplay));
+    tr.appendChild(el('td', `num lb-score-${scoreClass(player.total)}`, player.totalDisplay));
 
     // Round scores
-    for (let i = 0; i < 4; i++) {
-      const r = player.rounds?.[i];
-      const val = r?.display ?? '-';
-      const rCls = r?.score != null ? `lb-round ${scoreClass(r.score)}` : 'lb-round';
+    for (let r = 0; r < 4; r++) {
+      const rd = player.rounds?.[r];
+      const val = rd?.display ?? '-';
+      const rCls = rd?.score != null ? `lb-round ${scoreClass(rd.score)}` : 'lb-round';
       tr.appendChild(el('td', `num ${rCls}`, escHtml(val)));
     }
 
     // Thru / status
     let thruContent = '-';
-    if (player.status === 'cut') {
-      thruContent = '<span class="lb-status-cut">CUT</span>';
-    } else if (player.status === 'wd') {
-      thruContent = '<span class="lb-status-wd">WD</span>';
-    } else if (player.thru !== null && player.thru !== undefined) {
+    if (player.status === 'cut')       thruContent = '<span class="lb-status-cut">CUT</span>';
+    else if (player.status === 'wd')   thruContent = '<span class="lb-status-wd">WD</span>';
+    else if (player.thru !== null && player.thru !== undefined)
       thruContent = player.thru === 18 ? 'F' : `${player.thru}`;
-    }
-    const tdThru = el('td', 'num lb-thru', thruContent);
-    tr.appendChild(tdThru);
+    tr.appendChild(el('td', 'num lb-thru', thruContent));
+
+    // Expand arrow
+    tr.appendChild(el('td', 'lb-expand', '<span class="expand-arrow">&#9654;</span>'));
+
+    // Click to toggle scorecard
+    tr.addEventListener('click', () => {
+      if (expandedPlayers.has(player.name)) {
+        const next = tr.nextElementSibling;
+        if (next?.classList.contains('scorecard-row')) next.remove();
+        expandedPlayers.delete(player.name);
+        tr.classList.remove('expanded');
+      } else {
+        tr.insertAdjacentElement('afterend', buildScorecardRow(player, currentRound));
+        expandedPlayers.add(player.name);
+        tr.classList.add('expanded');
+      }
+    });
 
     tbody.appendChild(tr);
+
+    // Re-insert scorecard after re-render if it was previously expanded
+    if (expandedPlayers.has(player.name)) {
+      tbody.appendChild(buildScorecardRow(player, currentRound));
+    }
   }
 
   table.appendChild(tbody);
