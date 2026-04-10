@@ -370,7 +370,13 @@ app.get('/api/leaderboard', async (req, res) => {
       }
     }
 
-    const players = Object.values(scores.players).sort((a, b) => a.total - b.total);
+    const players = Object.values(scores.players).sort((a, b) => {
+      // WD/DQ players always sort to the bottom
+      const aOut = a.status === 'wd' || a.status === 'dq';
+      const bOut = b.status === 'wd' || b.status === 'dq';
+      if (aOut !== bOut) return aOut ? 1 : -1;
+      return a.total - b.total;
+    });
     const formatted = players.map(p => ({
       ...p,
       totalDisplay: formatScore(p.total),

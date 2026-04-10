@@ -158,7 +158,50 @@ function renderLeaderboard(data) {
 
   const tbody = document.createElement('tbody');
 
-  for (const player of data.players) {
+  // Determine cut line and WD section positions
+  const CUT_POSITION = 50;
+  const players = data.players;
+  // WD/DQ players are already sorted to the bottom by the server
+  const wdStartIndex = players.findIndex(p => p.status === 'wd' || p.status === 'dq');
+  const nonWdCount = wdStartIndex === -1 ? players.length : wdStartIndex;
+
+  // Find cut line: after the 50th player, extended through ties with same score
+  let cutAfterIndex = -1;
+  if (nonWdCount > CUT_POSITION) {
+    cutAfterIndex = CUT_POSITION - 1; // 0-indexed
+    const cutScore = players[cutAfterIndex].total;
+    while (cutAfterIndex + 1 < nonWdCount && players[cutAfterIndex + 1].total === cutScore) {
+      cutAfterIndex++;
+    }
+  }
+
+  for (let i = 0; i < players.length; i++) {
+    const player = players[i];
+
+    // Insert cut line divider after the last player making the cut
+    if (cutAfterIndex >= 0 && i === cutAfterIndex + 1) {
+      const cutRow = document.createElement('tr');
+      cutRow.className = 'divider-row cut-divider-row';
+      const cutTd = document.createElement('td');
+      cutTd.colSpan = 8;
+      cutTd.className = 'divider-cell';
+      cutTd.textContent = '— CUT —';
+      cutRow.appendChild(cutTd);
+      tbody.appendChild(cutRow);
+    }
+
+    // Insert WD section divider before first WD player
+    if (wdStartIndex >= 0 && i === wdStartIndex) {
+      const wdRow = document.createElement('tr');
+      wdRow.className = 'divider-row wd-divider-row';
+      const wdTd = document.createElement('td');
+      wdTd.colSpan = 8;
+      wdTd.className = 'divider-cell';
+      wdTd.textContent = '— WITHDRAWN —';
+      wdRow.appendChild(wdTd);
+      tbody.appendChild(wdRow);
+    }
+
     const tr = document.createElement('tr');
 
     // Highlight if in pool (inPool flag set by server)

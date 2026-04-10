@@ -394,6 +394,34 @@ body {
 .lb-status-cut  { color: var(--red); font-size: 0.75rem; text-transform: uppercase; font-weight: bold; }
 .lb-status-wd   { color: var(--gray); font-size: 0.75rem; text-transform: uppercase; }
 
+/* Cut line / WD section dividers */
+.divider-row { pointer-events: none; }
+.divider-row:hover { background: inherit !important; }
+
+.divider-cell {
+  padding: 5px 14px;
+  text-align: center;
+  font-family: sans-serif;
+  font-size: 0.72rem;
+  font-weight: bold;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.cut-divider-row .divider-cell {
+  background: #fdf3f2;
+  color: var(--red);
+  border-top: 2px solid #e8b4b0;
+  border-bottom: 2px solid #e8b4b0;
+}
+
+.wd-divider-row .divider-cell {
+  background: var(--gray-light);
+  color: var(--gray);
+  border-top: 1px solid #d4d0c8;
+  border-bottom: 1px solid #d4d0c8;
+}
+
 .pool-legend {
   display: flex;
   align-items: center;
