@@ -364,13 +364,13 @@ function renderLeaderboard(data) {
       <tr>
         <th>Pos</th>
         <th>Player</th>
-        <th class="num">Total</th>
         <th class="num">Today</th>
         <th class="num">Thru</th>
         <th class="num">R1</th>
         <th class="num">R2</th>
         <th class="num">R3</th>
         <th class="num">R4</th>
+        <th class="num">Total</th>
         <th class="lb-expand-col"></th>
       </tr>
     </thead>`;
@@ -434,9 +434,6 @@ function renderLeaderboard(data) {
     if (player.inPool) tdName.innerHTML += '<span class="pool-indicator" title="In pool"></span>';
     tr.appendChild(tdName);
 
-    // Total
-    tr.appendChild(el('td', `num lb-score-${scoreClass(player.total)}`, player.totalDisplay));
-
     // Today (current round net score, live while mid-round)
     const todayScore = getTodayScore(player, currentRound);
     const todayDisplay = todayScore !== null ? formatNet(todayScore) : '-';
@@ -458,6 +455,9 @@ function renderLeaderboard(data) {
       const rCls = rd?.score != null ? `lb-round ${scoreClass(rd.score)}` : 'lb-round';
       tr.appendChild(el('td', `num ${rCls}`, escHtml(val)));
     }
+
+    // Total
+    tr.appendChild(el('td', `num lb-score-${scoreClass(player.total)}`, player.totalDisplay));
 
     // Expand arrow
     tr.appendChild(el('td', 'lb-expand', '<span class="expand-arrow">&#9654;</span>'));
