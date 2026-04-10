@@ -366,11 +366,11 @@ function renderLeaderboard(data) {
         <th>Player</th>
         <th class="num">Total</th>
         <th class="num">Today</th>
+        <th class="num">Thru</th>
         <th class="num">R1</th>
         <th class="num">R2</th>
         <th class="num">R3</th>
         <th class="num">R4</th>
-        <th class="num">Thru</th>
         <th class="lb-expand-col"></th>
       </tr>
     </thead>`;
@@ -443,14 +443,6 @@ function renderLeaderboard(data) {
     const todayCls = todayScore !== null ? `lb-today ${scoreClass(todayScore)}` : 'lb-today lb-today-empty';
     tr.appendChild(el('td', `num ${todayCls}`, todayDisplay));
 
-    // Round scores
-    for (let r = 0; r < 4; r++) {
-      const rd = player.rounds?.[r];
-      const val = rd?.display ?? '-';
-      const rCls = rd?.score != null ? `lb-round ${scoreClass(rd.score)}` : 'lb-round';
-      tr.appendChild(el('td', `num ${rCls}`, escHtml(val)));
-    }
-
     // Thru / status
     let thruContent = '-';
     if (player.status === 'cut')       thruContent = '<span class="lb-status-cut">CUT</span>';
@@ -458,6 +450,14 @@ function renderLeaderboard(data) {
     else if (player.thru !== null && player.thru !== undefined)
       thruContent = player.thru === 18 ? 'F' : `${player.thru}`;
     tr.appendChild(el('td', 'num lb-thru', thruContent));
+
+    // Round scores
+    for (let r = 0; r < 4; r++) {
+      const rd = player.rounds?.[r];
+      const val = rd?.display ?? '-';
+      const rCls = rd?.score != null ? `lb-round ${scoreClass(rd.score)}` : 'lb-round';
+      tr.appendChild(el('td', `num ${rCls}`, escHtml(val)));
+    }
 
     // Expand arrow
     tr.appendChild(el('td', 'lb-expand', '<span class="expand-arrow">&#9654;</span>'));
