@@ -708,6 +708,7 @@ body {
 }
 
 [data-theme="dark"] .section-title      { color: var(--gold-light); }
+[data-theme="dark"] .header-title h1    { color: var(--gold-light); }
 [data-theme="dark"] .participant-name   { color: var(--gold-light); }
 [data-theme="dark"] .standing-card.rank-1 .participant-name { color: var(--gold-light); }
 [data-theme="dark"] .standing-card.rank-1 .card-header { background: #1a2e1a; }
