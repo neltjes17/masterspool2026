@@ -40,7 +40,7 @@ function roundLabel(round, status) {
 
 // ── Standings rendering ────────────────────────────────────────────────────
 
-function renderPickChip(pick, isCounting) {
+function renderPickChip(pick, isCounting, currentRound) {
   const chip = el('div', `pick-chip${isCounting ? ' counting' : ''}${pick.status === 'cut' ? ' cut-player' : ''}`);
 
   // ── Top row: dot · name · total/status ──────────────────────────────────
@@ -58,8 +58,23 @@ function renderPickChip(pick, isCounting) {
   } else if (pick.status === 'wd') {
     meta.appendChild(el('span', 'pick-status', 'WD'));
   } else if (pick.thru !== null && pick.thru !== undefined) {
-    const thruText = pick.thru === 'F' || pick.thru === 18 ? 'F' : `Thru ${pick.thru}`;
-    meta.appendChild(el('span', 'pick-status', thruText));
+    const thruVal = pick.thru;
+    const isFinished = thruVal === 'F' || thruVal === 18;
+    const isMidRound = !isFinished && typeof thruVal === 'number' && thruVal > 0;
+
+    if (isCounting && isMidRound && currentRound) {
+      const roundScore = pick.rounds?.[currentRound - 1]?.score ?? null;
+      if (roundScore !== null && roundScore !== 0) {
+        const isImproving = roundScore < 0;
+        const arrow = isImproving ? '\u25b2' : '\u25bc'; // ▲ ▼
+        const cls = isImproving ? 'pick-movement trending-up' : 'pick-movement trending-down';
+        meta.appendChild(el('span', cls, `${arrow} ${formatNet(roundScore)} · Thru ${thruVal}`));
+      } else {
+        meta.appendChild(el('span', 'pick-status', `Thru ${thruVal}`));
+      }
+    } else {
+      meta.appendChild(el('span', 'pick-status', isFinished ? 'F' : `Thru ${thruVal}`));
+    }
   }
 
   top.appendChild(meta);
@@ -86,7 +101,7 @@ function renderPickChip(pick, isCounting) {
   return chip;
 }
 
-function renderStandingCard(standing) {
+function renderStandingCard(standing, currentRound) {
   const isFirst = standing.rank === 1;
   const card = el('div', `standing-card${isFirst ? ' rank-1' : ''}`);
 
@@ -119,7 +134,7 @@ function renderStandingCard(standing) {
   picks.appendChild(el('div', 'picks-label', 'Counting picks (best 4)'));
   const grid = el('div', 'picks-grid');
   for (const pick of standing.best4) {
-    grid.appendChild(renderPickChip(pick, true));
+    grid.appendChild(renderPickChip(pick, true, currentRound));
   }
   picks.appendChild(grid);
 
@@ -130,7 +145,7 @@ function renderStandingCard(standing) {
     bench.appendChild(el('div', 'picks-label', 'Bench'));
     const benchGrid = el('div', 'picks-grid');
     for (const pick of standing.bench) {
-      benchGrid.appendChild(renderPickChip(pick, false));
+      benchGrid.appendChild(renderPickChip(pick, false, currentRound));
     }
     bench.appendChild(benchGrid);
     picks.appendChild(bench);
@@ -154,8 +169,11 @@ function renderStandings(data) {
     return;
   }
 
+  const currentRound = data.eventInfo?.currentRound ?? null;
+  const isLive = data.eventInfo?.eventStatus === 'IN_PROGRESS';
+
   for (const standing of data.standings) {
-    container.appendChild(renderStandingCard(standing));
+    container.appendChild(renderStandingCard(standing, isLive ? currentRound : null));
   }
 }
 

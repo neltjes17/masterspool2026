@@ -380,6 +380,14 @@ body {
   letter-spacing: 0.04em;
 }
 
+.pick-movement {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+.pick-movement.trending-up   { color: var(--green); }
+.pick-movement.trending-down { color: var(--red); }
+
 /* Round scores row */
 .chip-rounds {
   display: flex;
@@ -749,7 +757,8 @@ body {
   border-color: #5a2820;
   color: #e88a80;
 }
-[data-theme="dark"] .rank-delta.up   { color: #5fcc66; }
+[data-theme="dark"] .rank-delta.up              { color: #5fcc66; }
+[data-theme="dark"] .pick-movement.trending-up  { color: #5fcc66; }
 [data-theme="dark"] .site-footer     { border-top-color: var(--gray-light); }
 
 /* ── Responsive ───────────────────────────────────────────────────────────── */
