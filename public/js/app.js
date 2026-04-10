@@ -63,8 +63,17 @@ function renderPickChip(pick, isCounting, currentRound) {
     const isMidRound = !isFinished && typeof thruVal === 'number' && thruVal > 0;
 
     if (isCounting && isMidRound && currentRound) {
-      const roundScore = pick.rounds?.[currentRound - 1]?.score ?? null;
-      if (roundScore !== null && roundScore !== 0) {
+      // rounds[currentRound-1].score is null mid-round because the feed doesn't
+      // populate round.total until the round finishes. Infer the live partial
+      // score from the overall total minus the sum of completed previous rounds.
+      let roundScore = pick.rounds?.[currentRound - 1]?.score ?? null;
+      if (roundScore === null) {
+        const prevSum = (pick.rounds ?? [])
+          .slice(0, currentRound - 1)
+          .reduce((s, r) => s + (r?.score ?? 0), 0);
+        roundScore = (pick.total ?? 0) - prevSum;
+      }
+      if (roundScore !== 0) {
         const isImproving = roundScore < 0;
         const arrow = isImproving ? '\u25b2' : '\u25bc'; // ▲ ▼
         const cls = isImproving ? 'pick-movement trending-up' : 'pick-movement trending-down';
