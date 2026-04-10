@@ -127,15 +127,19 @@ function parseMastersData(json) {
       const gross = r?.total;          // integer gross score, null if not played
       const grossInt = parseInt(gross, 10);
 
-      // Hole-by-hole scores: masters.com exposes r.scores[] per round
+      // Hole-by-hole scores: try several field name patterns (varies across feed versions)
+      const holesRaw = r?.scores ?? r?.holeScores ?? r?.holes ?? r?.scorecard ?? null;
       let holes = null;
-      if (Array.isArray(r?.scores) && r.scores.length > 0) {
-        holes = r.scores.map((h, i) => {
+      if (Array.isArray(holesRaw) && holesRaw.length > 0) {
+        holes = holesRaw.map((h, i) => {
           if (typeof h === 'number') return { hole: i + 1, score: h, par: null };
+          // Values may come as strings ("4") or integers (4)
+          const score = parseInt(h.score ?? h.strokes ?? h.value ?? h.s, 10);
+          const par   = parseInt(h.par ?? h.p, 10);
           return {
-            hole: h.hole ?? h.holeNumber ?? (i + 1),
-            score: h.score ?? h.strokes ?? null,
-            par:   h.par ?? null,
+            hole:  parseInt(h.hole ?? h.holeNumber ?? h.number ?? h.n ?? (i + 1), 10) || (i + 1),
+            score: isNaN(score) ? null : score,
+            par:   isNaN(par)   ? null : par,
           };
         });
       }
@@ -540,13 +544,28 @@ app.get('/api/debug', async (req, res) => {
     findArrays(raw);
     // Expose raw round objects from first player so we can verify hole score fields
     const sampleRaw = raw?.data?.player?.[0] ?? raw?.player?.[0] ?? null;
+    // Show every key on the player and full round1/round2 objects
+    const samplePlayerKeys = sampleRaw ? Object.keys(sampleRaw) : [];
+    const samplePlayerRound1 = sampleRaw?.round1 ?? null;
+    const samplePlayerRound2 = sampleRaw?.round2 ?? null;
+    // Also show any top-level array fields (might contain hole scores)
+    const samplePlayerArrayFields = sampleRaw
+      ? Object.fromEntries(
+          Object.entries(sampleRaw)
+            .filter(([, v]) => Array.isArray(v))
+            .map(([k, v]) => [k, { length: v.length, first: v[0] }])
+        )
+      : {};
     results.masters = {
       ok: true,
       playerCount: parsed ? Object.keys(parsed.players).length : 0,
       topLevelKeys,
       secondLevel,
-      arrayPaths: arrayPaths.slice(0, 10),
-      samplePlayerRound1: sampleRaw?.round1 ?? null,
+      arrayPaths: arrayPaths.slice(0, 15),
+      samplePlayerKeys,
+      samplePlayerRound1,
+      samplePlayerRound2,
+      samplePlayerArrayFields,
     };
   } catch (err) {
     results.masters = { ok: false, error: err.message };
