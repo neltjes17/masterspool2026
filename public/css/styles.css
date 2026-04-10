@@ -335,6 +335,12 @@ body {
   gap: 8px;
 }
 
+/* Clickable chips link to leaderboard row */
+.pick-chip.linked { cursor: pointer; }
+.pick-chip.linked:hover { border-color: var(--green); }
+.pick-chip.counting.linked:hover { border-color: var(--green); background: #dceee5; }
+[data-theme="dark"] .pick-chip.counting.linked:hover { background: #1e3830; }
+
 /* Counting chips stack into two rows */
 .pick-chip.counting {
   flex-direction: column;

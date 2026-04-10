@@ -89,6 +89,18 @@ function renderPickChip(pick, isCounting, currentRound) {
   top.appendChild(meta);
   chip.appendChild(top);
 
+  // ── Click-to-scorecard: scroll to and expand this player's leaderboard row ─
+  if (pick.found !== false) {
+    chip.classList.add('linked');
+    chip.addEventListener('click', () => {
+      const row = Array.from(document.querySelectorAll('tr.expandable-row'))
+        .find(r => r.dataset.playername === pick.name);
+      if (!row) return;
+      if (!row.classList.contains('expanded')) row.click();
+      setTimeout(() => row.scrollIntoView({ behavior: 'smooth', block: 'start' }), 20);
+    });
+  }
+
   // ── Round scores row (counting chips only, when any round has been played) ─
   if (isCounting) {
     const rounds = pick.rounds ?? [];
@@ -393,6 +405,7 @@ function renderLeaderboard(data) {
 
     const tr = document.createElement('tr');
     tr.classList.add('expandable-row');
+    tr.dataset.playername = player.name;
     if (player.inPool) tr.classList.add('in-pool');
     if (player.status === 'cut') tr.classList.add('is-cut');
     if (expandedPlayers.has(player.name)) tr.classList.add('expanded');
