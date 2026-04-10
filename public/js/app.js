@@ -161,8 +161,8 @@ function renderStandings(data) {
 
 // ── Leaderboard scorecard helpers ─────────────────────────────────────────
 
-// Augusta National par by hole (1-18)
-const AUGUSTA_PAR = [4, 5, 4, 3, 4, 3, 4, 5, 4, 4, 4, 3, 4, 5, 3, 4, 3, 4];
+// Augusta National par by hole (1-18): front 36, back 36, total 72
+const AUGUSTA_PAR = [4, 5, 4, 3, 4, 3, 4, 5, 4, 4, 4, 3, 5, 4, 5, 3, 4, 4];
 
 // Track which players have their scorecard expanded (survives re-renders)
 const expandedPlayers = new Set();
