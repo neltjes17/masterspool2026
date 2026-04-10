@@ -238,9 +238,9 @@ function parseESPNData(json) {
     }
     const rounds = [1, 2, 3, 4].map(period => {
       const ls = lsMap[period];
-      if (!ls || ls.value == null) return { score: null, display: '-' };
+      if (!ls || ls.value == null) return { score: null, display: '-', holes: null };
       const grossInt = parseInt(ls.value, 10);
-      return { score: grossToNet(ls.value), display: isNaN(grossInt) ? '-' : String(grossInt) };
+      return { score: grossToNet(ls.value), display: isNaN(grossInt) ? '-' : String(grossInt), holes: null };
     });
 
     const statusName = c.status?.type?.name ?? '';
@@ -288,6 +288,35 @@ function parseESPNData(json) {
   };
 }
 
+// ── Hole data cache ────────────────────────────────────────────────────────
+// Persists hole scores from masters.com across ESPN fallback periods.
+// Keyed by normalizedName → array index (round 0-3) → holes array.
+const holeCache = {};
+
+function saveHolesToCache(players) {
+  for (const [key, player] of Object.entries(players)) {
+    for (let i = 0; i < (player.rounds?.length ?? 0); i++) {
+      const holes = player.rounds[i]?.holes;
+      if (Array.isArray(holes) && holes.length > 0) {
+        if (!holeCache[key]) holeCache[key] = {};
+        holeCache[key][i] = holes;
+      }
+    }
+  }
+}
+
+function applyHoleCache(players) {
+  for (const [key, player] of Object.entries(players)) {
+    const cached = holeCache[key];
+    if (!cached) continue;
+    for (let i = 0; i < (player.rounds?.length ?? 0); i++) {
+      if (!player.rounds[i].holes && cached[i]) {
+        player.rounds[i] = { ...player.rounds[i], holes: cached[i] };
+      }
+    }
+  }
+}
+
 // ── Cache / getScores (masters.com → ESPN fallback) ────────────────────────
 
 async function getScores() {
@@ -320,6 +349,11 @@ async function getScores() {
   cache.lastAttemptFailed = !parsed;
 
   if (parsed) {
+    // When masters.com succeeds, save hole data for future ESPN fallback periods.
+    // When ESPN is the source, enrich its (hole-less) rounds with cached hole data.
+    if (parsed.source === 'masters.com') saveHolesToCache(parsed.players);
+    else applyHoleCache(parsed.players);
+
     cache.data = parsed;
     cache.lastFetched = now;
   }
@@ -504,9 +538,20 @@ app.get('/api/leaderboard', async (req, res) => {
   }
 });
 
-// Force refresh cache
+// Force refresh cache — also attempts a fresh masters.com fetch to warm hole cache
 app.post('/api/refresh', async (req, res) => {
   cache.lastFetched = null;
+  // Try masters.com directly first to populate hole cache, regardless of current source
+  try {
+    const raw = await fetchMastersScores();
+    const parsed = parseMastersData(raw);
+    if (parsed) {
+      saveHolesToCache(parsed.players);
+      console.log('[refresh] Warmed hole cache from masters.com');
+    }
+  } catch (err) {
+    console.warn('[refresh] masters.com unavailable:', err.message);
+  }
   const scores = await getScores();
   res.json({ ok: true, source: scores?.source ?? null, lastUpdated: scores?.lastUpdated ?? null });
 });
