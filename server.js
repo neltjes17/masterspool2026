@@ -439,13 +439,9 @@ function calculateStandings(participants, scores) {
   // Sort by total score ascending (lowest wins)
   standings.sort((a, b) => a.total - b.total);
 
-  // Apply tied ranks
+  // Apply sequential ranks (no ties — each position gets a unique number)
   for (let i = 0; i < standings.length; i++) {
-    if (i > 0 && standings[i].total === standings[i - 1].total) {
-      standings[i].rank = standings[i - 1].rank;
-    } else {
-      standings[i].rank = i + 1;
-    }
+    standings[i].rank = i + 1;
   }
 
   return standings;
