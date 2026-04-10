@@ -108,7 +108,8 @@ body {
   gap: 8px;
 }
 
-.refresh-btn {
+.refresh-btn,
+.theme-toggle-btn {
   background: rgba(255,255,255,0.15);
   border: 1px solid rgba(255,255,255,0.3);
   color: var(--white);
@@ -122,7 +123,8 @@ body {
   justify-content: center;
   transition: background 0.2s;
 }
-.refresh-btn:hover { background: rgba(255,255,255,0.25); }
+.refresh-btn:hover,
+.theme-toggle-btn:hover { background: rgba(255,255,255,0.25); }
 .refresh-btn.spinning { animation: spin 0.7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -684,6 +686,71 @@ body {
 .under { color: var(--green); }
 .over  { color: var(--red); }
 .even  { color: var(--gray-dark); }
+
+/* ── Dark Mode ────────────────────────────────────────────────────────────── */
+[data-theme="dark"] {
+  --off-white:   #0d1f16;
+  --white:       #152a1e;
+  --gray-light:  #1e3829;
+  --gray:        #7aab8a;
+  --gray-dark:   #d8d4c8;
+  --cut-bg:      #1c1208;
+  --shadow-sm:   0 1px 6px rgba(0,0,0,.5);
+  --shadow:      0 2px 16px rgba(0,0,0,.6);
+}
+
+[data-theme="dark"] .section-title      { color: var(--gold-light); }
+[data-theme="dark"] .participant-name   { color: var(--gold-light); }
+[data-theme="dark"] .standing-card.rank-1 .participant-name { color: var(--gold-light); }
+[data-theme="dark"] .standing-card.rank-1 .card-header { background: #1a2e1a; }
+
+[data-theme="dark"] .pick-chip.counting {
+  background: #1a3025;
+  border-color: #2a5040;
+}
+[data-theme="dark"] .chip-rounds { border-top-color: rgba(0,180,120,.18); }
+
+[data-theme="dark"] .lb-table tbody tr:hover              { background: #182820; }
+[data-theme="dark"] .lb-table tbody tr.in-pool            { background: #1a2e22; }
+[data-theme="dark"] .lb-table tbody tr.in-pool:hover      { background: #1e3828; }
+[data-theme="dark"] .lb-table tbody tr.is-cut             { background: var(--cut-bg); }
+
+[data-theme="dark"] .cut-divider-row .divider-cell {
+  background: #280f0c;
+  border-color: #5a2820;
+}
+[data-theme="dark"] .wd-divider-row .divider-cell {
+  background: #1c2820;
+  border-color: #2a3828;
+}
+
+[data-theme="dark"] .scorecard-row > td {
+  background: #18281e;
+  border-bottom-color: var(--green);
+}
+[data-theme="dark"] .scorecard-title  { color: var(--gold-light); }
+[data-theme="dark"] .sc-table thead th { color: var(--gray); }
+[data-theme="dark"] .sc-subtotal {
+  background: rgba(0,103,71,.18);
+  border-color: rgba(0,180,120,.25);
+  color: var(--gray-dark);
+}
+[data-theme="dark"] .sc-score-total   { color: var(--gold-light); }
+
+[data-theme="dark"] .hs-birdie { border-color: var(--green-light); color: var(--green-light); }
+[data-theme="dark"] .hs-bogey  { border-color: #e06050; color: #e06050; }
+[data-theme="dark"] .hs-double {
+  background: #9a3020;
+  box-shadow: 0 0 0 2px #9a3020, 0 0 0 4px rgba(192,57,43,.25);
+}
+
+[data-theme="dark"] .error-state {
+  background: #280f0c;
+  border-color: #5a2820;
+  color: #e88a80;
+}
+[data-theme="dark"] .rank-delta.up   { color: #5fcc66; }
+[data-theme="dark"] .site-footer     { border-top-color: var(--gray-light); }
 
 /* ── Responsive ───────────────────────────────────────────────────────────── */
 @media (max-width: 600px) {

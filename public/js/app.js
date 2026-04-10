@@ -430,6 +430,36 @@ function renderLeaderboard(data) {
   container.appendChild(legend);
 }
 
+// ── Theme toggle ───────────────────────────────────────────────────────────
+
+function getTheme() {
+  return document.documentElement.getAttribute('data-theme') || 'light';
+}
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('theme', theme);
+  updateToggleBtn(theme);
+}
+
+function updateToggleBtn(theme) {
+  const btn = document.getElementById('themeToggle');
+  if (!btn) return;
+  if (theme === 'dark') {
+    btn.innerHTML = '&#9728;'; // sun — click to go light
+    btn.title = 'Switch to light mode';
+  } else {
+    btn.innerHTML = '&#9790;'; // crescent moon — click to go dark
+    btn.title = 'Switch to dark mode';
+  }
+}
+
+function initTheme() {
+  // Theme may already be set by the anti-FOUC script in <head>;
+  // just sync the button icon to match.
+  updateToggleBtn(getTheme());
+}
+
 // ── Stale data banner ──────────────────────────────────────────────────────
 
 let staleBannerDismissed = false;
@@ -524,8 +554,13 @@ function escHtml(str) {
 // ── Init ───────────────────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', () => {
+  initTheme();
   refreshAll();
   setInterval(() => refreshAll(), REFRESH_INTERVAL);
+
+  document.getElementById('themeToggle')?.addEventListener('click', () => {
+    applyTheme(getTheme() === 'dark' ? 'light' : 'dark');
+  });
 
   document.getElementById('refreshBtn')?.addEventListener('click', () => refreshAll(true));
 

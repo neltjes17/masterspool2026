@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Masters Pool 2026</title>
   <link rel="stylesheet" href="/css/styles.css" />
+  <!-- Apply saved theme before paint to prevent flash -->
+  <script>(function(){var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribute('data-theme',t);})();</script>
 </head>
 <body>
 
@@ -22,6 +24,7 @@
         <span id="roundBadge" class="round-badge"></span>
         <div class="last-updated">
           Updated <span id="lastUpdated">—</span>
+          <button id="themeToggle" class="theme-toggle-btn" title="Switch to dark mode">&#9790;</button>
           <button id="refreshBtn" class="refresh-btn" title="Refresh now">&#8635;</button>
         </div>
       </div>
