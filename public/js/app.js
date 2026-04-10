@@ -33,9 +33,9 @@ function roundLabel(round, status) {
   if (!round) return '';
   const labels = { 1: 'Round 1', 2: 'Round 2', 3: 'Round 3', 4: 'Round 4' };
   const base = labels[round] || `Round ${round}`;
-  if (/COMPLETE/i.test(status || '') && round === 4) return 'Final';
-  if (/COMPLETE/i.test(status || '')) return base + ' · Complete';
-  return base + ' · In Progress';
+  if (status === 'FINAL') return 'Final';
+  if (status === 'ROUND_COMPLETE') return `${base} \u00b7 All Finished`;
+  return `${base} \u00b7 In Progress`;
 }
 
 // ── Standings rendering ────────────────────────────────────────────────────

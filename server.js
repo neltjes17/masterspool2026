@@ -125,15 +125,37 @@ function parseMastersData(json) {
     };
   }
 
-  const active = Object.values(players).filter(p => p.status === 'active');
-  const currentRound = active.reduce((max, p) => Math.max(max, p.currentRound ?? 1), 1);
-  const allFinished = active.every(p => p.thru === 'F' || p.thru === 18);
+  // Determine current round: highest round number where any player has started
+  // (roundStatus !== '' and !== 'pre' means the player has teed off)
+  let currentRound = 1;
+  for (let r = 4; r >= 1; r--) {
+    const key = `round${r}`;
+    const anyStarted = rawPlayers.some(p => {
+      const rs = (p[key]?.roundStatus ?? '').toLowerCase();
+      return rs !== '' && rs !== 'pre';
+    });
+    if (anyStarted) { currentRound = r; break; }
+  }
+
+  // Round is complete when every non-WD/DQ player's roundStatus is "finished"
+  const roundKey = `round${currentRound}`;
+  const countingPlayers = rawPlayers.filter(p => {
+    const s = String(p.status ?? '').toUpperCase();
+    return s !== 'WD' && s !== 'DQ';
+  });
+  const allFinishedRound = countingPlayers.length > 0 &&
+    countingPlayers.every(p => (p[roundKey]?.roundStatus ?? '').toLowerCase() === 'finished');
+
+  let eventStatus;
+  if (currentRound === 4 && allFinishedRound) eventStatus = 'FINAL';
+  else if (allFinishedRound) eventStatus = 'ROUND_COMPLETE';
+  else eventStatus = 'IN_PROGRESS';
 
   return {
     eventName: 'Masters Tournament',
     source: 'masters.com',
     currentRound,
-    eventStatus: (currentRound === 4 && allFinished) ? 'FINAL' : 'IN_PROGRESS',
+    eventStatus,
     players,
     lastUpdated: new Date().toISOString(),
   };
@@ -202,13 +224,21 @@ function parseESPNData(json) {
   if (Object.keys(players).length === 0) return null;
 
   const currentRound = comp.status?.period ?? 1;
-  const compStatus = comp.status?.type?.name ?? '';
+  // state: 'pre' | 'in' | 'post'
+  const compState = comp.status?.type?.state ?? '';
+  const compName  = comp.status?.type?.name  ?? '';
+  const roundComplete = compState === 'post' || /COMPLETE/i.test(compName);
+
+  let eventStatus;
+  if (roundComplete && currentRound === 4) eventStatus = 'FINAL';
+  else if (roundComplete) eventStatus = 'ROUND_COMPLETE';
+  else eventStatus = 'IN_PROGRESS';
 
   return {
     eventName: event.shortName || event.name || 'Masters Tournament',
     source: 'espn',
     currentRound,
-    eventStatus: /COMPLETE/i.test(compStatus) ? 'FINAL' : 'IN_PROGRESS',
+    eventStatus,
     players,
     lastUpdated: new Date().toISOString(),
   };
