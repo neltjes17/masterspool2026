@@ -511,6 +511,29 @@ app.post('/api/refresh', async (req, res) => {
   res.json({ ok: true, source: scores?.source ?? null, lastUpdated: scores?.lastUpdated ?? null });
 });
 
+// Hole data diagnostic — confirm holes are parsed and included in player rounds
+app.get('/api/holes-check', async (req, res) => {
+  const scores = await getScores();
+  if (!scores) return res.json({ ok: false, error: 'No score data' });
+  const sample = Object.values(scores.players).slice(0, 3).map(p => ({
+    name: p.name,
+    source: scores.source,
+    currentRound: scores.currentRound,
+    roundsCount: p.rounds?.length ?? 0,
+    r1: {
+      score: p.rounds?.[0]?.score,
+      display: p.rounds?.[0]?.display,
+      holesType: Array.isArray(p.rounds?.[0]?.holes) ? `Array(${p.rounds[0].holes.length})` : String(p.rounds?.[0]?.holes),
+      firstHole: p.rounds?.[0]?.holes?.[0] ?? null,
+    },
+    r2: {
+      score: p.rounds?.[1]?.score,
+      holesType: Array.isArray(p.rounds?.[1]?.holes) ? `Array(${p.rounds[1].holes.length})` : String(p.rounds?.[1]?.holes),
+    },
+  }));
+  res.json({ ok: true, sample });
+});
+
 // Debug — raw responses from both sources (useful for diagnosing parsing issues)
 app.get('/api/debug', async (req, res) => {
   const results = {};
