@@ -314,9 +314,28 @@ body {
   gap: 8px;
 }
 
+/* Counting chips stack into two rows */
 .pick-chip.counting {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
   background: #edf4f0;
   border-color: #b3d5c4;
+}
+
+/* Top row inside a counting chip */
+.chip-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Right-side score + thru block */
+.chip-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  margin-left: auto;
 }
 
 .pick-chip .pick-name {
@@ -339,6 +358,42 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
+
+/* Round scores row */
+.chip-rounds {
+  display: flex;
+  gap: 12px;
+  margin-top: 6px;
+  padding-top: 5px;
+  border-top: 1px solid rgba(0, 103, 71, 0.12);
+  padding-left: 14px; /* indent past the count-dot */
+}
+
+.chip-round {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 20px;
+}
+
+.chip-round-label {
+  font-size: 0.6rem;
+  color: var(--gray);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+}
+
+.chip-round-score {
+  font-size: 0.75rem;
+  font-weight: bold;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.3;
+}
+.chip-round-score.under { color: var(--green); }
+.chip-round-score.over  { color: var(--red); }
+.chip-round-score.even  { color: var(--gray-dark); }
+.chip-round.not-played .chip-round-score { color: var(--gray); font-weight: normal; }
 
 .pick-chip.cut-player {
   opacity: 0.6;

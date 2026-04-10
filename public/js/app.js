@@ -10,6 +10,12 @@ function scoreClass(n) {
   return 'even';
 }
 
+function formatNet(n) {
+  if (n === null || n === undefined) return '—';
+  if (n === 0) return 'E';
+  return n > 0 ? `+${n}` : `${n}`;
+}
+
 function el(tag, cls, html) {
   const e = document.createElement(tag);
   if (cls) e.className = cls;
@@ -37,31 +43,46 @@ function roundLabel(round, status) {
 function renderPickChip(pick, isCounting) {
   const chip = el('div', `pick-chip${isCounting ? ' counting' : ''}${pick.status === 'cut' ? ' cut-player' : ''}`);
 
-  if (isCounting) {
-    chip.appendChild(el('span', 'count-dot'));
-  }
+  // ── Top row: dot · name · total/status ──────────────────────────────────
+  const top = el('div', 'chip-top');
 
-  const nameSpan = el('span', 'pick-name', escHtml(pick.name));
-  chip.appendChild(nameSpan);
+  if (isCounting) top.appendChild(el('span', 'count-dot'));
 
-  const meta = el('div', '', '');
-  meta.style.display = 'flex';
-  meta.style.flexDirection = 'column';
-  meta.style.alignItems = 'flex-end';
+  top.appendChild(el('span', 'pick-name', escHtml(pick.name)));
 
-  const scoreSpan = el('span', `pick-score ${scoreClass(pick.total)}`, pick.totalDisplay);
-  meta.appendChild(scoreSpan);
+  const meta = el('div', 'chip-meta');
+  meta.appendChild(el('span', `pick-score ${scoreClass(pick.total)}`, pick.totalDisplay));
 
   if (pick.status === 'cut') {
     meta.appendChild(el('span', 'pick-status', 'CUT'));
   } else if (pick.status === 'wd') {
     meta.appendChild(el('span', 'pick-status', 'WD'));
   } else if (pick.thru !== null && pick.thru !== undefined) {
-    const thruText = pick.thru === 18 ? 'F' : `Thru ${pick.thru}`;
+    const thruText = pick.thru === 'F' || pick.thru === 18 ? 'F' : `Thru ${pick.thru}`;
     meta.appendChild(el('span', 'pick-status', thruText));
   }
 
-  chip.appendChild(meta);
+  top.appendChild(meta);
+  chip.appendChild(top);
+
+  // ── Round scores row (counting chips only, when any round has been played) ─
+  if (isCounting) {
+    const rounds = pick.rounds ?? [];
+    const hasAnyRound = rounds.some(r => r.score !== null && r.score !== undefined);
+    if (hasAnyRound) {
+      const roundsRow = el('div', 'chip-rounds');
+      ['R1', 'R2', 'R3', 'R4'].forEach((label, i) => {
+        const r = rounds[i];
+        const played = r?.score !== null && r?.score !== undefined;
+        const roundEl = el('div', `chip-round${played ? '' : ' not-played'}`);
+        roundEl.appendChild(el('span', 'chip-round-label', label));
+        roundEl.appendChild(el('span', played ? `chip-round-score ${scoreClass(r.score)}` : 'chip-round-score', played ? formatNet(r.score) : '—'));
+        roundsRow.appendChild(roundEl);
+      });
+      chip.appendChild(roundsRow);
+    }
+  }
+
   return chip;
 }
 
